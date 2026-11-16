@@ -19,9 +19,12 @@ const SURFACES = {
 // 129x129 texels vertex-aligned (texel i at local x = 2i). Layers live in texture arrays to stay well under 16 samplers.
 const LAYERS = ['Surface_Grass','Surface_Dirt','Surface_Mud','Surface_Gravel','Surface_Sand','Surface_Snow','Surface_Water'];
 const LAYER_RES = 512;
-const CHUNK_BASE = new URL('../world/chunks/', import.meta.url).href;
+const TEST_CHUNK_BASE = new URL('../world/chunks/', import.meta.url).href;
 
-export function createWorldLook(renderer, { waterLevel = 5.3 } = {}) {
+// opts.chunkBase: folder holding chunk_<ix>_<iz>.splat_a/b.png (default: the 512 m test world). opts.waterLevel: constant river level for the
+// wet-bank effect (test world); the 2 km world passes Infinity-like (rivers sit at many heights) and the water depth comes from the water mesh itself.
+export function createWorldLook(renderer, { waterLevel = 5.3, chunkBase = TEST_CHUNK_BASE } = {}) {
+  const CHUNK_BASE = chunkBase;
   const loader = new THREE.TextureLoader();
   const aniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
   const texCache = new Map(), matCache = new Map();
@@ -204,6 +207,9 @@ export function createWorldLook(renderer, { waterLevel = 5.3 } = {}) {
         if (i >= 0 && i < 129 && j >= 0 && j < 129) H[j * 129 + i] = Math.max(H[j * 129 + i], p.getY(k));
       }
     });
+    // LOD1 chunks only have every 4th vertex: interpolate the gaps (rows, then columns) so the depth is not -100 m between them
+    for (let j = 0; j < 129; j++) { let a = -1; for (let i = 0; i < 129; i++) { if (H[j * 129 + i] > -99) { if (a >= 0 && i - a > 1) for (let k = a + 1; k < i; k++) H[j * 129 + k] = H[j * 129 + a] + (H[j * 129 + i] - H[j * 129 + a]) * (k - a) / (i - a); a = i; } } }
+    for (let i = 0; i < 129; i++) { let a = -1; for (let j = 0; j < 129; j++) { if (H[j * 129 + i] > -99) { if (a >= 0 && j - a > 1) for (let k = a + 1; k < j; k++) H[k * 129 + i] = H[a * 129 + i] + (H[j * 129 + i] - H[a * 129 + i]) * (k - a) / (j - a); a = j; } } }
     const half = new Uint16Array(H.length); for (let k = 0; k < H.length; k++) half[k] = THREE.DataUtils.toHalfFloat(H[k]);
     const t = new THREE.DataTexture(half, 129, 129, THREE.RedFormat, THREE.HalfFloatType);
     t.minFilter = t.magFilter = THREE.LinearFilter; t.needsUpdate = true; return t;
@@ -224,7 +230,7 @@ export function createWorldLook(renderer, { waterLevel = 5.3 } = {}) {
           float wn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f);
             return mix(mix(wh(i), wh(i+vec2(1,0)), f.x), mix(wh(i+vec2(0,1)), wh(i+vec2(1,1)), f.x), f.y); }`)
         .replace('#include <color_fragment>', `#include <color_fragment>
-          float depth = uWL - texture2D(uH, (vWLocal.xz * 0.5 + 0.5) / 129.0).r;
+          float depth = (vWLocal.y + 0.03) - texture2D(uH, (vWLocal.xz * 0.5 + 0.5) / 129.0).r; // water mesh height (rivers slope) minus terrain
           vec3 shallow = vec3(0.09, 0.075, 0.04), deep = vec3(0.008, 0.025, 0.022);   // silty shallows, murky green-teal depths
           diffuseColor.rgb = mix(shallow, deep, smoothstep(0.0, 1.0, depth));
           vec2 wp = vWLocal.xz + uOrigin;
