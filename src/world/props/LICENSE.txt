@@ -1,0 +1,8 @@
+Props in this folder are derived from the Kenney "Nature Kit" (version 2.1)
+Created/distributed by Kenney (www.kenney.nl)
+License: Creative Commons Zero (CC0 1.0) - http://creativecommons.org/publicdomain/zero/1.0/
+Free for personal, educational and commercial use; credit appreciated but not required.
+
+Source files (assets/models/kenney-nature-kit/*.glb) were uniformly rescaled to real-world metres, re-centred so the
+base sits at y=0 (x/z centred), and in a few cases (snowy pines, sandstone rocks, dry scrub) had a flat material colour
+changed. No Poly Haven or Quaternius assets are used. Mapping of prototype -> source file: props_manifest.json.

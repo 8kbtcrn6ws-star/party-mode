@@ -1,0 +1,911 @@
+{
+ "_doc": "Instanced prop prototypes. Each glb: Y up, +Z unused (rotationally free), origin at the base centre (y=0), real metres at scale 1. Instances in chunk props.json reference these by `proto`. Scale in props.json multiplies uniformly.",
+ "license": "All glbs derived from Kenney Nature Kit 2.1 (CC0 1.0, https://kenney.nl/assets/nature-kit). Modified only by uniform scaling/re-origin and flat-colour recolouring (snow/sandstone/dry variants). See LICENSE.txt in this folder.",
+ "kitIdNote": "`kit` = placeholder vegetation id for the game vegetation kit (tree_pine, tree_broadleaf, tree_birch, tree_dead, bush, fern, grass_clump, log, stump, rock_s/m/l). Instances in props.json carry both `kit` (preferred) and `proto` (Kenney fallback glb). Rock size class is recomputed per instance from proto height x scale. tree_palm, cactus, crop_*, fence have no kit equivalent yet and keep their Kenney glb.",
+ "prototypes": {
+  "pine_a": {
+   "file": "proto_pine_a.glb",
+   "source": "tree_pineTallA.glb",
+   "scale": 7.1914,
+   "size": [
+    2.78,
+    11.0,
+    2.82
+   ],
+   "tris": 78,
+   "radius": 1.41,
+   "category": "tree",
+   "collider": {
+    "shape": "cylinder",
+    "radius": 0.35
+   },
+   "kit": "tree_pine"
+  },
+  "pine_b": {
+   "file": "proto_pine_b.glb",
+   "source": "tree_pineTallB.glb",
+   "scale": 7.2366,
+   "size": [
+    2.8,
+    14.0,
+    2.84
+   ],
+   "tris": 78,
+   "radius": 1.42,
+   "category": "tree",
+   "collider": {
+    "shape": "cylinder",
+    "radius": 0.4
+   },
+   "kit": "tree_pine"
+  },
+  "pine_c": {
+   "file": "proto_pine_c.glb",
+   "source": "tree_pineTallC.glb",
+   "scale": 7.1835,
+   "size": [
+    3.45,
+    12.0,
+    3.98
+   ],
+   "tris": 98,
+   "radius": 1.99,
+   "category": "tree",
+   "collider": {
+    "shape": "cylinder",
+    "radius": 0.35
+   },
+   "kit": "tree_pine"
+  },
+  "pine_d": {
+   "file": "proto_pine_d.glb",
+   "source": "tree_pineTallD.glb",
+   "scale": 7.709,
+   "size": [
+    3.7,
+    16.0,
+    4.28
+   ],
+   "tris": 98,
+   "radius": 2.14,
+   "category": "tree",
+   "collider": {
+    "shape": "cylinder",
+    "radius": 0.45
+   },
+   "kit": "tree_pine"
+  },
+  "pine_small": {
+   "file": "proto_pine_small.glb",
+   "source": "tree_pineSmallA.glb",
+   "scale": 6.2035,
+   "size": [
+    3.1,
+    6.0,
+    3.1
+   ],
+   "tris": 164,
+   "radius": 1.55,
+   "category": "tree",
+   "collider": {
+    "shape": "cylinder",
+    "radius": 0.25
+   },
+   "kit": "tree_pine"
+  },
+  "oak": {
+   "file": "proto_oak.glb",
+   "source": "tree_oak.glb",
+   "scale": 7.3395,
+   "size": [
+    4.7,
+    9.0,
+    5.43
+   ],
+   "tris": 196,
+   "radius": 2.71,
+   "category": "tree",
+   "collider": {
+    "shape": "cylinder",
+    "radius": 0.45
+   },
+   "kit": "tree_broadleaf"
+  },
+  "oak_fall": {
+   "file": "proto_oak_fall.glb",
+   "source": "tree_oak_fall.glb",
+   "scale": 7.3395,
+   "size": [
+    4.7,
+    9.0,
+    5.43
+   ],
+   "tris": 196,
+   "radius": 2.71,
+   "category": "tree",
+   "collider": {
+    "shape": "cylinder",
+    "radius": 0.45
+   },
+   "kit": "tree_broadleaf"
+  },
+  "birch": {
+   "file": "proto_birch.glb",
+   "source": "tree_default.glb",
+   "scale": 5.8552,
+   "size": [
+    4.42,
+    10.0,
+    3.83
+   ],
+   "tris": 114,
+   "radius": 2.21,
+   "category": "tree",
+   "collider": {
+    "shape": "cylinder",
+    "radius": 0.35
+   },
+   "kit": "tree_birch"
+  },
+  "thin_tree": {
+   "file": "proto_thin_tree.glb",
+   "source": "tree_thin.glb",
+   "scale": 6.7101,
+   "size": [
+    4.57,
+    10.0,
+    4.14
+   ],
+   "tris": 228,
+   "radius": 2.28,
+   "category": "tree",
+   "collider": {
+    "shape": "cylinder",
+    "radius": 0.3
+   },
+   "kit": "tree_broadleaf"
+  },
+  "small_tree": {
+   "file": "proto_small_tree.glb",
+   "source": "tree_small.glb",
+   "scale": 4.9548,
+   "size": [
+    1.76,
+    5.5,
+    2.03
+   ],
+   "tris": 62,
+   "radius": 1.01,
+   "category": "tree",
+   "collider": {
+    "shape": "cylinder",
+    "radius": 0.25
+   },
+   "kit": "tree_broadleaf"
+  },
+  "palm_tall": {
+   "file": "proto_palm_tall.glb",
+   "source": "tree_palmTall.glb",
+   "scale": 6.6388,
+   "size": [
+    6.87,
+    9.0,
+    6.87
+   ],
+   "tris": 190,
+   "radius": 3.43,
+   "category": "tree",
+   "collider": {
+    "shape": "cylinder",
+    "radius": 0.3
+   },
+   "kit": "tree_palm"
+  },
+  "palm_short": {
+   "file": "proto_palm_short.glb",
+   "source": "tree_palmShort.glb",
+   "scale": 5.6806,
+   "size": [
+    5.88,
+    6.0,
+    5.88
+   ],
+   "tris": 190,
+   "radius": 2.94,
+   "category": "tree",
+   "collider": {
+    "shape": "cylinder",
+    "radius": 0.3
+   },
+   "kit": "tree_palm"
+  },
+  "cactus_tall": {
+   "file": "proto_cactus_tall.glb",
+   "source": "cactus_tall.glb",
+   "scale": 4.5333,
+   "size": [
+    1.8,
+    3.4,
+    1.54
+   ],
+   "tris": 122,
+   "radius": 0.9,
+   "category": "tree",
+   "collider": {
+    "shape": "cylinder",
+    "radius": 0.45
+   },
+   "kit": "cactus"
+  },
+  "cactus_short": {
+   "file": "proto_cactus_short.glb",
+   "source": "cactus_short.glb",
+   "scale": 3.0019,
+   "size": [
+    1.03,
+    1.6,
+    0.89
+   ],
+   "tris": 116,
+   "radius": 0.51,
+   "category": "plant",
+   "collider": {
+    "shape": "none"
+   },
+   "kit": "cactus"
+  },
+  "pine_snow_a": {
+   "file": "proto_pine_snow_a.glb",
+   "source": "tree_pineTallA.glb",
+   "scale": 7.1914,
+   "size": [
+    2.78,
+    11.0,
+    2.82
+   ],
+   "tris": 78,
+   "radius": 1.41,
+   "category": "tree",
+   "collider": {
+    "shape": "cylinder",
+    "radius": 0.35
+   },
+   "kit": "tree_pine"
+  },
+  "pine_snow_b": {
+   "file": "proto_pine_snow_b.glb",
+   "source": "tree_pineTallB.glb",
+   "scale": 7.2366,
+   "size": [
+    2.8,
+    14.0,
+    2.84
+   ],
+   "tris": 78,
+   "radius": 1.42,
+   "category": "tree",
+   "collider": {
+    "shape": "cylinder",
+    "radius": 0.4
+   },
+   "kit": "tree_pine"
+  },
+  "pine_snow_c": {
+   "file": "proto_pine_snow_c.glb",
+   "source": "tree_pineTallC.glb",
+   "scale": 7.1835,
+   "size": [
+    3.45,
+    12.0,
+    3.98
+   ],
+   "tris": 98,
+   "radius": 1.99,
+   "category": "tree",
+   "collider": {
+    "shape": "cylinder",
+    "radius": 0.35
+   },
+   "kit": "tree_pine"
+  },
+  "pine_snow_small": {
+   "file": "proto_pine_snow_small.glb",
+   "source": "tree_pineSmallA.glb",
+   "scale": 6.2035,
+   "size": [
+    3.1,
+    6.0,
+    3.1
+   ],
+   "tris": 164,
+   "radius": 1.55,
+   "category": "tree",
+   "collider": {
+    "shape": "cylinder",
+    "radius": 0.25
+   },
+   "kit": "tree_pine"
+  },
+  "rock_large_a": {
+   "file": "proto_rock_large_a.glb",
+   "source": "stone_largeA.glb",
+   "scale": 6.929,
+   "size": [
+    5.44,
+    1.8,
+    7.04
+   ],
+   "tris": 80,
+   "radius": 3.52,
+   "category": "rock",
+   "collider": {
+    "shape": "sphere",
+    "radius": 1.0
+   },
+   "kit": "rock_m"
+  },
+  "rock_large_b": {
+   "file": "proto_rock_large_b.glb",
+   "source": "stone_largeC.glb",
+   "scale": 5.6055,
+   "size": [
+    5.97,
+    1.8,
+    5.69
+   ],
+   "tris": 72,
+   "radius": 2.98,
+   "category": "rock",
+   "collider": {
+    "shape": "sphere",
+    "radius": 1.0
+   },
+   "kit": "rock_m"
+  },
+  "rock_large_c": {
+   "file": "proto_rock_large_c.glb",
+   "source": "stone_largeE.glb",
+   "scale": 6.1592,
+   "size": [
+    6.75,
+    1.8,
+    5.67
+   ],
+   "tris": 64,
+   "radius": 3.37,
+   "category": "rock",
+   "collider": {
+    "shape": "sphere",
+    "radius": 1.0
+   },
+   "kit": "rock_m"
+  },
+  "rock_tall_a": {
+   "file": "proto_rock_tall_a.glb",
+   "source": "stone_tallA.glb",
+   "scale": 3.2131,
+   "size": [
+    3.16,
+    3.2,
+    2.2
+   ],
+   "tris": 136,
+   "radius": 1.58,
+   "category": "rock",
+   "collider": {
+    "shape": "sphere",
+    "radius": 0.9
+   },
+   "kit": "rock_l"
+  },
+  "rock_tall_b": {
+   "file": "proto_rock_tall_b.glb",
+   "source": "stone_tallC.glb",
+   "scale": 4.5981,
+   "size": [
+    2.1,
+    3.6,
+    2.01
+   ],
+   "tris": 37,
+   "radius": 1.05,
+   "category": "rock",
+   "collider": {
+    "shape": "sphere",
+    "radius": 0.9
+   },
+   "kit": "rock_l"
+  },
+  "rock_small_a": {
+   "file": "proto_rock_small_a.glb",
+   "source": "stone_smallA.glb",
+   "scale": 3.6606,
+   "size": [
+    1.32,
+    0.7,
+    1.32
+   ],
+   "tris": 16,
+   "radius": 0.66,
+   "category": "rock",
+   "collider": {
+    "shape": "none"
+   },
+   "kit": "rock_s"
+  },
+  "rock_small_b": {
+   "file": "proto_rock_small_b.glb",
+   "source": "stone_smallC.glb",
+   "scale": 5.7063,
+   "size": [
+    2.06,
+    0.7,
+    2.06
+   ],
+   "tris": 16,
+   "radius": 1.03,
+   "category": "rock",
+   "collider": {
+    "shape": "none"
+   },
+   "kit": "rock_s"
+  },
+  "rock_mossy_a": {
+   "file": "proto_rock_mossy_a.glb",
+   "source": "rock_largeA.glb",
+   "scale": 5.7742,
+   "size": [
+    4.53,
+    1.5,
+    5.86
+   ],
+   "tris": 80,
+   "radius": 2.93,
+   "category": "rock",
+   "collider": {
+    "shape": "sphere",
+    "radius": 0.9
+   },
+   "kit": "rock_m"
+  },
+  "rock_mossy_b": {
+   "file": "proto_rock_mossy_b.glb",
+   "source": "rock_largeC.glb",
+   "scale": 4.6713,
+   "size": [
+    4.97,
+    1.5,
+    4.74
+   ],
+   "tris": 72,
+   "radius": 2.49,
+   "category": "rock",
+   "collider": {
+    "shape": "sphere",
+    "radius": 0.9
+   },
+   "kit": "rock_m"
+  },
+  "sandstone_large": {
+   "file": "proto_sandstone_large.glb",
+   "source": "stone_largeB.glb",
+   "scale": 4.6484,
+   "size": [
+    3.56,
+    2.0,
+    4.72
+   ],
+   "tris": 85,
+   "radius": 2.36,
+   "category": "rock",
+   "collider": {
+    "shape": "sphere",
+    "radius": 1.0
+   },
+   "kit": "rock_m"
+  },
+  "sandstone_tall": {
+   "file": "proto_sandstone_tall.glb",
+   "source": "stone_tallB.glb",
+   "scale": 4.526,
+   "size": [
+    3.46,
+    4.0,
+    3.49
+   ],
+   "tris": 172,
+   "radius": 1.74,
+   "category": "rock",
+   "collider": {
+    "shape": "sphere",
+    "radius": 1.0
+   },
+   "kit": "rock_l"
+  },
+  "sandstone_small": {
+   "file": "proto_sandstone_small.glb",
+   "source": "stone_smallB.glb",
+   "scale": 4.5251,
+   "size": [
+    1.63,
+    0.8,
+    1.63
+   ],
+   "tris": 24,
+   "radius": 0.82,
+   "category": "rock",
+   "collider": {
+    "shape": "none"
+   },
+   "kit": "rock_s"
+  },
+  "snow_rock_large": {
+   "file": "proto_snow_rock_large.glb",
+   "source": "stone_largeD.glb",
+   "scale": 3.5195,
+   "size": [
+    3.76,
+    2.0,
+    3.63
+   ],
+   "tris": 80,
+   "radius": 1.88,
+   "category": "rock",
+   "collider": {
+    "shape": "sphere",
+    "radius": 1.0
+   },
+   "kit": "rock_m"
+  },
+  "bush": {
+   "file": "proto_bush.glb",
+   "source": "plant_bushLarge.glb",
+   "scale": 5.7629,
+   "size": [
+    2.16,
+    1.4,
+    1.93
+   ],
+   "tris": 60,
+   "radius": 1.08,
+   "category": "plant",
+   "collider": {
+    "shape": "none"
+   },
+   "kit": "bush"
+  },
+  "bush_small": {
+   "file": "proto_bush_small.glb",
+   "source": "plant_bush.glb",
+   "scale": 3.2727,
+   "size": [
+    1.3,
+    0.8,
+    1.3
+   ],
+   "tris": 32,
+   "radius": 0.65,
+   "category": "plant",
+   "collider": {
+    "shape": "none"
+   },
+   "kit": "bush"
+  },
+  "bush_tri": {
+   "file": "proto_bush_tri.glb",
+   "source": "plant_bushLargeTriangle.glb",
+   "scale": 10.6303,
+   "size": [
+    4.33,
+    1.8,
+    5.0
+   ],
+   "tris": 39,
+   "radius": 2.5,
+   "category": "plant",
+   "collider": {
+    "shape": "none"
+   },
+   "kit": "bush"
+  },
+  "dry_scrub": {
+   "file": "proto_dry_scrub.glb",
+   "source": "plant_bushSmall.glb",
+   "scale": 3.3769,
+   "size": [
+    1.29,
+    0.7,
+    1.14
+   ],
+   "tris": 16,
+   "radius": 0.65,
+   "category": "plant",
+   "collider": {
+    "shape": "none"
+   },
+   "kit": "bush"
+  },
+  "grass_clump": {
+   "file": "proto_grass_clump.glb",
+   "source": "grass_large.glb",
+   "scale": 2.1654,
+   "size": [
+    0.89,
+    0.55,
+    0.88
+   ],
+   "tris": 224,
+   "radius": 0.44,
+   "category": "plant",
+   "collider": {
+    "shape": "none"
+   },
+   "kit": "grass_clump"
+  },
+  "fern": {
+   "file": "proto_fern.glb",
+   "source": "plant_flatTall.glb",
+   "scale": 3.1656,
+   "size": [
+    0.86,
+    0.9,
+    0.86
+   ],
+   "tris": 32,
+   "radius": 0.43,
+   "category": "plant",
+   "collider": {
+    "shape": "none"
+   },
+   "kit": "fern"
+  },
+  "fence": {
+   "file": "proto_fence.glb",
+   "source": "fence_simple.glb",
+   "scale": 2.5,
+   "size": [
+    2.5,
+    0.86,
+    0.18
+   ],
+   "tris": 64,
+   "radius": 1.25,
+   "category": "fence",
+   "collider": {
+    "shape": "none"
+   },
+   "kit": "fence"
+  },
+  "fence_gate": {
+   "file": "proto_fence_gate.glb",
+   "source": "fence_gate.glb",
+   "scale": 2.5,
+   "size": [
+    2.5,
+    0.86,
+    0.18
+   ],
+   "tris": 524,
+   "radius": 1.25,
+   "category": "fence",
+   "collider": {
+    "shape": "none"
+   }
+  },
+  "log": {
+   "file": "proto_log.glb",
+   "source": "log.glb",
+   "scale": 4.2,
+   "size": [
+    0.98,
+    0.73,
+    2.98
+   ],
+   "tris": 200,
+   "radius": 1.49,
+   "category": "prop",
+   "collider": {
+    "shape": "none"
+   },
+   "kit": "log"
+  },
+  "log_stack": {
+   "file": "proto_log_stack.glb",
+   "source": "log_stackLarge.glb",
+   "scale": 3.0,
+   "size": [
+    1.9,
+    1.04,
+    2.13
+   ],
+   "tris": 310,
+   "radius": 1.06,
+   "category": "prop",
+   "collider": {
+    "shape": "none"
+   }
+  },
+  "stump": {
+   "file": "proto_stump.glb",
+   "source": "stump_old.glb",
+   "scale": 2.6266,
+   "size": [
+    0.94,
+    0.7,
+    0.97
+   ],
+   "tris": 120,
+   "radius": 0.49,
+   "category": "prop",
+   "collider": {
+    "shape": "none"
+   },
+   "kit": "stump"
+  },
+  "campfire": {
+   "file": "proto_campfire.glb",
+   "source": "campfire_stones.glb",
+   "scale": 3.0,
+   "size": [
+    1.62,
+    0.23,
+    1.55
+   ],
+   "tris": 264,
+   "radius": 0.81,
+   "category": "prop",
+   "collider": {
+    "shape": "none"
+   }
+  },
+  "tent_small": {
+   "file": "proto_tent_small.glb",
+   "source": "tent_smallOpen.glb",
+   "scale": 3.8,
+   "size": [
+    2.08,
+    2.13,
+    2.53
+   ],
+   "tris": 224,
+   "radius": 1.27,
+   "category": "prop",
+   "collider": {
+    "shape": "none"
+   }
+  },
+  "tent_large": {
+   "file": "proto_tent_large.glb",
+   "source": "tent_detailedClosed.glb",
+   "scale": 4.0,
+   "size": [
+    3.5,
+    2.24,
+    2.55
+   ],
+   "tris": 228,
+   "radius": 1.75,
+   "category": "prop",
+   "collider": {
+    "shape": "none"
+   }
+  },
+  "sign": {
+   "file": "proto_sign.glb",
+   "source": "sign.glb",
+   "scale": 3.5,
+   "size": [
+    1.05,
+    1.43,
+    0.24
+   ],
+   "tris": 44,
+   "radius": 0.53,
+   "category": "prop",
+   "collider": {
+    "shape": "none"
+   }
+  },
+  "column": {
+   "file": "proto_column.glb",
+   "source": "statue_column.glb",
+   "scale": 4.0,
+   "size": [
+    1.2,
+    4.0,
+    1.2
+   ],
+   "tris": 122,
+   "radius": 0.6,
+   "category": "ruin",
+   "collider": {
+    "shape": "cylinder",
+    "radius": 0.6
+   }
+  },
+  "column_broken": {
+   "file": "proto_column_broken.glb",
+   "source": "statue_columnDamaged.glb",
+   "scale": 4.0,
+   "size": [
+    1.2,
+    2.8,
+    1.2
+   ],
+   "tris": 108,
+   "radius": 0.6,
+   "category": "ruin",
+   "collider": {
+    "shape": "cylinder",
+    "radius": 0.6
+   }
+  },
+  "obelisk": {
+   "file": "proto_obelisk.glb",
+   "source": "statue_obelisk.glb",
+   "scale": 6.854,
+   "size": [
+    2.1,
+    6.0,
+    2.1
+   ],
+   "tris": 38,
+   "radius": 1.05,
+   "category": "ruin",
+   "collider": {
+    "shape": "cylinder",
+    "radius": 0.7
+   }
+  },
+  "ruin_block": {
+   "file": "proto_ruin_block.glb",
+   "source": "statue_block.glb",
+   "scale": 3.5,
+   "size": [
+    1.4,
+    1.4,
+    1.4
+   ],
+   "tris": 140,
+   "radius": 0.7,
+   "category": "ruin",
+   "collider": {
+    "shape": "none"
+   }
+  },
+  "wheat": {
+   "file": "proto_wheat.glb",
+   "source": "crops_wheatStageB.glb",
+   "scale": 1.6,
+   "size": [
+    0.86,
+    0.86,
+    0.71
+   ],
+   "tris": 360,
+   "radius": 0.43,
+   "category": "crop",
+   "collider": {
+    "shape": "none"
+   },
+   "kit": "crop_wheat"
+  },
+  "corn": {
+   "file": "proto_corn.glb",
+   "source": "crops_cornStageD.glb",
+   "scale": 1.6,
+   "size": [
+    0.71,
+    2.0,
+    0.71
+   ],
+   "tris": 300,
+   "radius": 0.35,
+   "category": "crop",
+   "collider": {
+    "shape": "none"
+   },
+   "kit": "crop_corn"
+  }
+ }
+}
