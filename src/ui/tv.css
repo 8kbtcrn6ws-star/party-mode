@@ -1,0 +1,94 @@
+/* Wayfare TV UI (lobby and later TV screens). Namespaced .pm-* so it never collides with a host page's own CSS.
+   Values mirror Prism's components.css (ui/components.css); tokens come from tokens.css. TV units are px on a 1920x1080 stage. */
+@import url("./tokens.css");
+@import url("./fonts.css");
+
+.pm-root { position: absolute; inset: 0; overflow: hidden; background: var(--color-bg); color: var(--color-text); font-family: var(--font-ui); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; font-feature-settings: "tnum" 1, "cv11" 1; -webkit-user-select: none; user-select: none; }
+.pm-root.is-idle-cursor, .pm-root.is-idle-cursor * { cursor: none !important; }
+.pm-root *, .pm-root *::before, .pm-root *::after { box-sizing: border-box; }
+:where(.pm-root) button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; margin: 0; }
+.pm-stage { position: absolute; left: 50%; top: 50%; width: var(--tv-w); height: var(--tv-h); transform-origin: 0 0; }
+.pm-screen { position: absolute; inset: 0; overflow: hidden; background: var(--color-bg); }
+.pm-root .ic { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.pm-abs { position: absolute; }
+.pm-scene { position: absolute; inset: 0; filter: blur(10px) saturate(.8); transform: scale(1.04); }
+.pm-scene svg { width: 100%; height: 100%; display: block; }
+.pm-scrim { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(7,10,16,.80), rgba(7,10,16,.90)); }
+.pm-safe { position: absolute; left: var(--tv-safe-x); right: var(--tv-safe-x); top: var(--tv-safe-y); bottom: var(--tv-safe-y); }
+.pm-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Type */
+.pm-h1 { font-family: var(--type-tv-h1-family); font-size: var(--type-tv-h1-size); line-height: var(--type-tv-h1-line); font-weight: var(--type-tv-h1-weight); letter-spacing: var(--type-tv-h1-tracking); }
+.pm-h2 { font-family: var(--type-tv-h2-family); font-size: var(--type-tv-h2-size); line-height: var(--type-tv-h2-line); font-weight: var(--type-tv-h2-weight); letter-spacing: var(--type-tv-h2-tracking); }
+.pm-body-lg { font-family: var(--type-tv-body-lg-family); font-size: var(--type-tv-body-lg-size); line-height: var(--type-tv-body-lg-line); font-weight: var(--type-tv-body-lg-weight);  }
+.pm-body { font-family: var(--type-tv-body-family); font-size: var(--type-tv-body-size); line-height: var(--type-tv-body-line); font-weight: var(--type-tv-body-weight);  }
+.pm-eyebrow { font: 600 24px/32px var(--font-ui); letter-spacing: .14em; text-transform: uppercase; color: var(--color-text-3); }
+
+/* TV button: 96 high (sm 72). primary / secondary (default) / ghost */
+.pm-btn { display: inline-flex; align-items: center; justify-content: center; gap: 16px; height: 96px; padding: 0 48px; border-radius: var(--radius-lg); font: 700 32px/1 var(--font-ui); letter-spacing: .01em; background: var(--color-surface-high); color: var(--color-text); transition: transform var(--dur-fast) var(--ease-standard), box-shadow var(--dur-fast) var(--ease-standard), background var(--dur-fast); text-decoration: none; outline: 0; }
+.pm-btn .ic { font-size: 36px; }
+.pm-btn.sm { height: 72px; padding: 0 32px; font-size: 28px; }
+.pm-btn.primary { background: var(--color-accent); color: var(--color-on-accent); }
+.pm-btn.ghost { background: transparent; color: var(--color-text-2); }
+.pm-btn.is-focus { transform: scale(var(--focus-tv-scale)); box-shadow: var(--focus-ring-tv), var(--shadow-2); }
+.pm-btn.primary.is-focus { background: var(--color-accent); }
+.pm-btn.ghost.is-focus { background: var(--color-surface-high); color: var(--color-text); }
+.pm-btn.is-pressed { transform: scale(.98); background: var(--color-accent-strong); }
+.pm-btn.is-disabled { background: var(--color-surface-raised); color: var(--color-text-3); box-shadow: none; }
+.pm-btn.is-disabled.is-focus { box-shadow: var(--focus-ring-tv); }
+
+/* Chip */
+.pm-chip { display: inline-flex; align-items: center; gap: 12px; height: 48px; padding: 0 20px; border-radius: var(--radius-pill); background: var(--color-surface-high); color: var(--color-text); font: 600 24px/1 var(--font-ui); white-space: nowrap; }
+.pm-chip .ic { font-size: 26px; }
+.pm-chip.ok { background: var(--color-success); color: var(--color-on-success); }
+.pm-chip.info { background: var(--color-surface-high); color: var(--color-trail); }
+.pm-chip.good { background: var(--color-surface-high); color: var(--color-success); }
+.pm-chip.warn { background: var(--color-surface-high); color: var(--color-accent-text); }
+.pm-chip.danger { background: var(--color-surface-high); color: var(--color-danger); }
+.pm-chip.ghost { background: transparent; box-shadow: inset 0 0 0 2px var(--color-border-strong); color: var(--color-text-2); }
+
+/* Key-cap hint bar */
+.pm-hints { display: flex; gap: 40px; align-items: center; height: 72px; }
+.pm-hint { display: flex; align-items: center; gap: 14px; font: 500 24px/1 var(--font-ui); color: var(--color-text-2); }
+.pm-keycap { min-width: 56px; height: 48px; padding: 0 14px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: var(--color-surface-high); box-shadow: inset 0 0 0 2px var(--color-border-strong); font: 700 24px/1 var(--font-ui); color: var(--color-text); }
+.pm-keycap .ic { font-size: 24px; }
+
+/* Player slot 1064x128 */
+.pm-slot { display: flex; align-items: center; gap: 28px; height: 128px; padding: 0 32px 0 24px; border-radius: var(--radius-lg); background: var(--color-surface-raised); box-shadow: inset 0 0 0 2px var(--color-border); position: relative; outline: 0; transition: transform var(--dur-fast) var(--ease-standard), background var(--dur-fast), box-shadow var(--dur-fast); transform-origin: left center; }
+.pm-slot .badge { width: 80px; height: 80px; flex: none; transition: opacity var(--dur-base); }
+.pm-slot .badge svg { width: 80px; height: 80px; display: block; }
+.pm-slot .who { flex: 1; min-width: 0; }
+.pm-slot .name { font: 600 36px/44px var(--font-display); display: flex; align-items: center; gap: 14px; }
+.pm-slot .name > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pm-slot .name .ic { font-size: 28px; color: var(--color-accent); }
+.pm-slot .meta { font: 500 28px/36px var(--font-ui); color: var(--color-text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pm-slot.is-empty { background: transparent; box-shadow: none; border: 3px dashed var(--color-border-strong); }
+.pm-slot.is-empty .name { color: var(--color-text-2); }
+.pm-slot.is-away .badge { opacity: .6; }
+.pm-slot.is-focus { box-shadow: var(--focus-ring-tv), var(--shadow-2); background: var(--color-surface-high); transform: scale(var(--focus-tv-scale)); }
+.pm-dots i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: currentColor; margin-left: 5px; opacity: .5; animation: pm-dot 1.2s var(--ease-standard) infinite; }
+.pm-dots i:nth-child(2) { opacity: .75; animation-delay: .15s; }
+.pm-dots i:nth-child(3) { opacity: 1; animation-delay: .3s; }
+@keyframes pm-dot { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-4px); } }
+
+/* QR tile + room code */
+.pm-qr { background: #fff; border-radius: var(--radius-xl); padding: 32px; width: 400px; height: 400px; box-shadow: var(--shadow-3); display: flex; align-items: center; justify-content: center; }
+.pm-qr svg { width: 336px; height: 336px; display: block; }
+.pm-qr .pm-qr-wait { width: 336px; height: 336px; border-radius: var(--radius-md); background: repeating-linear-gradient(45deg, #EEF0F4 0 14px, #F7F8FA 14px 28px); display: flex; align-items: center; justify-content: center; text-align: center; font: 600 28px/36px var(--font-ui); color: #454C5C; padding: 24px; }
+.pm-qr.is-stale svg { opacity: .35; }
+.pm-code { font: var(--type-tv-code-weight) 96px/96px var(--font-mono); letter-spacing: .12em; color: var(--color-text); margin-top: 4px; }
+.pm-code.is-wait { color: var(--color-text-3); }
+.pm-url { font: 500 28px/36px var(--font-mono); color: var(--color-text-2); margin-top: 12px; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* Count + caption */
+.pm-count { color: var(--color-text-2); }
+.pm-caption { font: 500 24px/32px var(--font-ui); color: var(--color-text-2); text-align: right; }
+
+/* Confirm sheet (Prism: "Remove player?" confirm with two buttons; layout not mocked, built from the Panel component) */
+.pm-modal { position: absolute; inset: 0; z-index: var(--z-modal); display: flex; align-items: center; justify-content: center; background: var(--color-scrim-strong); opacity: 0; transition: opacity var(--dur-base) var(--ease-standard); }
+.pm-modal.is-open { opacity: 1; }
+.pm-panel { background: rgba(18,25,38,.92); border-radius: var(--radius-xl); box-shadow: inset 0 0 0 2px rgba(255,255,255,.08), var(--shadow-3); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); padding: 36px 32px 32px; width: 760px; }
+.pm-panel .pm-h2 { margin-bottom: 8px; }
+.pm-panel .pm-body { color: var(--color-text-2); margin-bottom: 32px; }
+.pm-panel .row { display: flex; gap: 16px; justify-content: flex-end; }
+.pm-root.is-modal .pm-safe { visibility: visible; }
