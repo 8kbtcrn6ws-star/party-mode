@@ -21,11 +21,14 @@
   .hud .spd { font-size: 34px; font-variant-numeric: tabular-nums; } .hud .nm { display: flex; gap: 8px; align-items: center; }
   .hud .chip { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
   .hud .sub { font-weight: 500; opacity: .9; }
-  #toast { position: fixed; z-index: 60; left: 50%; top: 14px; transform: translateX(-50%); background: #000c; padding: 8px 14px; border-radius: 10px; font-size: 14px; max-width: 80vw; }
+  #toast { position: fixed; z-index: 60; left: 50%; top: 52px; transform: translateX(-50%); background: #000c; padding: 8px 14px; border-radius: 10px; font-size: 14px; max-width: 80vw; }
   #err { color: #ff7a6b; }
   .pm-modal[hidden] { display: none !important; } /* workaround for a Pixel bug: tv.css display:flex beats [hidden], so the invisible modal swallowed every click on Start/Leave */
   #lobby { position: fixed; inset: 0; z-index: 45; }
   #netstat { position: fixed; z-index: 55; left: 50%; bottom: 18px; transform: translateX(-50%); background: #000d; border: 1px solid #fff3; padding: 10px 18px; border-radius: 12px; font-size: 16px; text-align: center; }
+  #scoreboard { position: fixed; z-index: 54; left: 50%; top: 10px; transform: translateX(-50%); background: #000b; border: 1px solid #fff3; border-radius: 12px; padding: 6px 14px; font: 600 13px system-ui, sans-serif; display: flex; gap: 14px; align-items: center; pointer-events: none; }
+  #scoreboard.hidden { display: none; } #scoreboard .row { display: flex; gap: 6px; align-items: center; } #scoreboard .chip { width: 10px; height: 10px; border-radius: 50%; } #scoreboard .p { font-size: 16px; font-weight: 800; color: #f5b94a; min-width: 1.2em; text-align: right; }
+  .hud .score { font: 800 22px system-ui, sans-serif; color: #f5b94a; text-shadow: 0 1px 3px #000; } .hud.hit { animation: hitflash .9s ease-out; } @keyframes hitflash { 0% { box-shadow: inset 0 0 0 5px #f5b94a; } 100% { box-shadow: inset 0 0 0 0 transparent; } }
   #endParty { position: fixed; z-index: 55; right: 12px; top: 10px; font: 600 13px system-ui, sans-serif; padding: 8px 14px; border: 1px solid #fff4; border-radius: 10px; background: #000a; color: #f3f0e8; cursor: pointer; }
 </style>
 <!-- Pinned libraries: identical to game/LIBS.md and tests/fixtures/importmap.json (Kiwi). Keep the four /npm/ lines: WebKit needs them. -->
@@ -67,6 +70,7 @@
 <div id="toast" class="hidden"></div>
 <div id="netstat" class="hidden" role="status" aria-live="polite"></div>
 <button id="endParty" class="hidden">End party</button>
+<div id="scoreboard" class="hidden" aria-live="polite"></div>
 
 <script type="module">
 import * as THREE from 'three';
@@ -85,6 +89,8 @@ import { createLoop } from './src/core/loop.js';
 import { events } from './src/core/events.js';
 import { createSoftBoundary } from './src/core/boundary.js';
 import { loadWorld } from './src/core/world.js';
+import { loadBigWorld } from './src/core/bigworld.js';
+import { createScoring } from './src/core/scoring.js';
 import { createLobby } from './src/ui/lobby.js'; // Pixel's TV lobby (core/lobby.js is the old stand-in, kept as a fallback)
 import { loadVehicleModel, createVehicleVisual } from './src/core/vehicle-visual.js';
 
@@ -110,19 +116,23 @@ async function boot() {
   resize(innerWidth, innerHeight);
   addEventListener('resize', () => resize(innerWidth, innerHeight));
   addEventListener('keydown', (e) => { if (e.code === 'KeyT' && !e.repeat) setTimeOfDay(getState().hours + 1); }); // debug: time of day
+  // Default: the 2 km open world (streamed). ?world=test loads the old 512 m test terrain.
+  G.renderer = renderer;
   look = params.get('look') === '0' ? null : createWorldLook(renderer);
+  const dress = (root, c) => look?.dressChunk(root, { ix: c.ix, iz: c.iz });
   const [world, stats, template] = await Promise.all([
-    loadWorld(WORLD_URL, { physicsWorld: G.pw.world, onChunk: (root, c) => look?.dressChunk(root, { ix: c.ix, iz: c.iz }), ...(RenderApi.pickLod ? { pickLod: RenderApi.pickLod } : {}) }),
+    loadWorld(WORLD_URL, { physicsWorld: G.pw.world, onChunk: dress, ...(RenderApi.pickLod ? { pickLod: RenderApi.pickLod } : {}) }),
     loadVehicleStats(VEHICLE_STATS_URL(DEFAULT_VEHICLE)),
     loadVehicleModel(`./vehicles/${DEFAULT_VEHICLE}.glb`),
   ]);
   G.world = world; G.stats = stats; G.template = template;
-  G.boundary = params.get('boundary') === '0' ? null : createSoftBoundary({ size: world.size ?? 512 });
+  G.boundary = params.get('boundary') === '0' ? null : createSoftBoundary({ size: world.size ?? 512, margin: 20 });
+  G.scoring = createScoring({ world: G.pw.world });
   scene.add(world.group);
-  attractCam = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 2500);
+  attractCam = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, G.big ? 3600 : 2500);
   G.loop = createLoop({ step, render });
   G.loop.start();
-  $('loadMsg').textContent = `World loaded: ${world.meta.name}, ${world.meta.chunks.length} chunks.`;
+  $('loadMsg').textContent = `World loaded: ${world.meta.name}, ${world.meta.chunks.length} chunks (${world.size} m).`;
   $('startBtns').classList.remove('hidden');
   window.__ready = true;
   events.emit('ready');
@@ -130,6 +140,22 @@ async function boot() {
   if (auto === 'solo') startSolo(); else if (auto === 'party' || (!auto && PartyHost.peekSavedSession({ transport: 'webrtc' }))) startParty(); // a saved party means the TV was reloaded: restore it
 }
 
+// ---- Party Mode plays on the 2 km open world; Solo keeps the 512 m test terrain (loaded at boot, code path unchanged) ----
+async function switchToBigWorld() {
+  if (G.big) return;
+  $('loadMsg').textContent = 'Loading the big world…';
+  const old = G.world;
+  if (old.collider) G.pw.world.removeCollider(old.collider, true); // the 512 m terrain collider must not stay in the shared physics world
+  const bigLook = params.get('look') === '0' ? null : createWorldLook(G.renderer, { waterLevel: 1e5, chunkBase: new URL('./src/world/chunks_main/', location.href).href });
+  const world = await loadBigWorld(WORLD_URL, { physicsWorld: G.pw.world, onChunk: (root, c) => bigLook?.dressChunk(root, { ix: c.ix, iz: c.iz }) });
+  await world.preload(world.spawns.slice(0, 4)); // colliders + the nearest chunks are there before the first frame
+  scene.remove(old.group); scene.add(world.group);
+  G.world = world; G.big = true; look = bigLook;
+  attractCam.far = 3600; attractCam.updateProjectionMatrix();
+  G.boundary = params.get('boundary') === '0' ? null : createSoftBoundary({ size: world.size, margin: 60 });
+}
+
+G.switchToBigWorld = switchToBigWorld; // QA hook
 // ---- cars ----
 function addCar(id, { name, colour, slot, source }) {
   if (G.cars.has(id)) return G.cars.get(id);
@@ -137,9 +163,10 @@ function addCar(id, { name, colour, slot, source }) {
   const v = G.pw.add(createVehicle(G.pw.world, G.stats, spawn));
   const visual = createVehicleVisual(G.template, colour);
   scene.add(visual.group);
-  const camera = new THREE.PerspectiveCamera(settings.camera.fov, 16 / 9, 0.1, 2500);
+  const camera = new THREE.PerspectiveCamera(settings.camera.fov, 16 / 9, 0.1, G.big ? 3600 : 2500);
   const rig = createCameraRig(camera, { forward: new THREE.Vector3(0, 0, 1), driverEye: new THREE.Vector3(v.driverEye.x, v.driverEye.y, v.driverEye.z), mode: settings.camera.mode, fov: settings.camera.fov });
   const hud = document.createElement('div'); hud.className = 'hud'; $('views').appendChild(hud);
+  G.scoring?.ensure(id);
   const car = { id, name, colour, slot, source, v, visual, camera, rig, hud, lastInput: null, prevCam: false, prevReset: false, feedbackAt: 0 };
   G.cars.set(id, car);
   syncViews();
@@ -147,7 +174,7 @@ function addCar(id, { name, colour, slot, source }) {
 }
 function removeCar(id) {
   const c = G.cars.get(id); if (!c) return;
-  G.pw.remove(c.v); G.pw.world.removeRigidBody(c.v.body); c.visual.dispose(); c.hud.remove(); G.cars.delete(id); syncViews();
+  G.scoring?.forget(id); G.pw.remove(c.v); G.pw.world.removeRigidBody(c.v.body); c.visual.dispose(); c.hud.remove(); G.cars.delete(id); syncViews();
 }
 function syncViews() {
   const n = Math.max(1, Math.min(4, G.cars.size)); setViews(n);
@@ -156,24 +183,46 @@ function syncViews() {
   [...G.cars.values()].forEach((c, i) => { const [x, y, w, h] = cells[i] || cells[0]; Object.assign(c.hud.style, { left: x * 100 + '%', top: y * 100 + '%', width: w * 100 + '%', height: h * 100 + '%' }); });
 }
 
+// ground height for a reset: exact where the chunk data is loaded, else the coarse far-LOD height plus a safety margin (the car is held until the real collider is there)
+const groundY = (x, z) => G.world.heightAt(x, z) + (G.world.heightAt.exact && !G.world.heightAt.exact(x, z) ? 4 : 0);
+// ---- scoring: +1 for ramming another car (core/scoring.js) ----
+function onScore(h) {
+  const a = G.cars.get(h.by); if (a) { a.hud.classList.add('hit'); setTimeout(() => a.hud.classList.remove('hit'), 900); }
+  toast(`${G.cars.get(h.by)?.name ?? h.by} rammed ${G.cars.get(h.hit)?.name ?? h.hit}  +1`, 1800); renderScoreboard();
+}
+function renderScoreboard() {
+  const el = $('scoreboard'); if (!el) return;
+  const rows = [...G.cars.values()].map((c) => ({ name: c.name, colour: c.colour, pts: G.scoring.scores.get(c.id) || 0 })).sort((x, y) => y.pts - x.pts);
+  el.classList.toggle('hidden', rows.length < 2 || G.phase !== 'playing');
+  el.innerHTML = '<b>Scoreboard</b>' + rows.map((r) => `<div class="row"><span class="chip" style="background:${r.colour}"></span><span class="n">${r.name}</span><span class="p">${r.pts}</span></div>`).join('');
+}
 // ---- fixed 60 Hz step: inputs -> vehicles -> physics ----
 const ZERO = { steer: 0, throttle: 0, brake: 0, rev: 0, hand: 0, horn: 0, look: null };
 function step(dt) {
+  const gr = G.world.isGroundReady;
   for (const c of G.cars.values()) {
+    if (gr) { // streaming safety net (2 km world): a car whose ground collider is not loaded yet is held still, then released unchanged
+      const p = c.v.body.translation(), lv = c.v.held ? c.v.heldVel.lin : c.v.body.linvel();
+      if (!gr(p.x, p.z, 6 + 0.8 * Math.hypot(lv.x, lv.z))) { if (!c.v.held) c.v.hold(true); c.v.holdStep(); continue; }
+      if (c.v.held) c.v.hold(false);
+    }
     const r = c.source(dt);                       // { input, camEdge, resetEdge }
     c.lastInput = r.input;
     if (r.camEdge) { if (r.input.cam === 'view') c.rig.toggleFirstPerson(); else c.rig.next(); } // 'view' = cab <-> last third-person view (one camEdge per pulse)
     let inp = r.input;
     if (G.boundary) {
       const pz = c.v.pose(), back = G.boundary.rescue(pz);
-      if (back) c.v.reset({ ...back, y: G.world.heightAt(back.x, back.z) - 1, heading: Math.atan2(G.boundary.size / 2 - back.x, G.boundary.size / 2 - back.z) });
+      if (back) c.v.reset({ ...back, y: groundY(back.x, back.z) - 1, heading: Math.atan2(G.boundary.size / 2 - back.x, G.boundary.size / 2 - back.z) });
       else inp = G.boundary.apply(inp, pz);   // soft edge: throttle fades and steering turns the car back toward the centre
     }
     c.v.applyInput({ ...inp, reset: 0 });
     if (r.resetEdge) c.v.reset();
     c.v.update(dt, G.world.surfaceAt);
   }
+  const list = [...G.cars.values()];
+  if (list.length > 1) G.scoring.before(list);
   G.pw.world.step();
+  if (list.length > 1) for (const h of G.scoring.after(list, dt)) onScore(h);
   G.probe?.(dt);
 }
 
@@ -193,23 +242,25 @@ function render(alpha, dt) {
     cams.push(attractCam); focus.push(new THREE.Vector3(s.x, s.y, s.z));
   }
   look?.update(dt);
-  if ((streamT += dt) > 0.25) { streamT = 0; G.world.stream(focus.map((f) => ({ x: f.x, z: f.z }))); }
+  const pts = focus.map((f) => ({ x: f.x, z: f.z }));
+  if (G.world.update) G.world.update(G.cars.size ? pts : []);   // physics colliders around every car, every frame
+  if ((streamT += dt) > 0.25) { streamT = 0; G.world.stream(pts); }
   renderFrame(cams, focus, dt);
-  if ((hudTimer += dt) > 0.1) { hudTimer = 0; updateHud(); }
+  if ((hudTimer += dt) > 0.1) { hudTimer = 0; updateHud(); renderScoreboard(); }
 }
 function dominantSurface(tl) { const n = {}; let best = 'dirt', bc = 0; for (const s of tl.surfaces) { n[s] = (n[s] || 0) + 1; if (n[s] > bc) { bc = n[s]; best = s; } } return tl.surfaces.includes('water') ? 'water' : best; }
 function updateHud() {
   for (const c of G.cars.values()) {
     const tl = c.v.telemetry(), kmh = Math.abs(tl.speed) * 3.6;
     c.hud.innerHTML = `<div class="nm"><span class="chip" style="background:${c.colour}"></span>${c.name}</div><div class="spd">${kmh.toFixed(0)} <small>km/h</small></div>` +
-      `<div class="sub">gear ${tl.gear < 0 ? 'R' : tl.gear} · ${dominantSurface(tl)} · ${CAMERA_LABELS[c.rig.mode]}${c.v.stalled ? ' · STALLED' : ''}</div>`;
+      `${G.cars.size > 1 ? `<div class="score">★ ${G.scoring.scores.get(c.id) || 0}</div>` : ''}<div class="sub">gear ${tl.gear < 0 ? 'R' : tl.gear} · ${dominantSurface(tl)} · ${CAMERA_LABELS[c.rig.mode]}${c.v.stalled ? ' · STALLED' : ''}</div>`;
   }
 }
 
 // QA hook (not used by the game): a parked car with no input source at a given spot, for the streaming test.
 G.debugAddCar = (id, { x, z, heading = 0, colour = '#ffffff' }) => {
   const car = addCar(id, { name: id, colour, slot: 0, source: () => ({ input: car.debugInput || ZERO, camEdge: false, resetEdge: false }) });
-  car.v.reset({ x, z, y: G.world.heightAt(x, z) + 0.2, heading }); car.v.reset({ x, z, y: G.world.heightAt(x, z) - 1.0, heading });
+  car.v.reset({ x, z, y: groundY(x, z) + 0.2, heading }); car.v.reset({ x, z, y: groundY(x, z) - 1.0, heading });
   return car;
 };
 
@@ -246,7 +297,7 @@ function carFromPlayer(p, restoredExtra) {
     source: () => { const i = host.getInput(p.id); return { input: i, camEdge: !!i.camEdge, resetEdge: !!i.resetEdge }; },
   });
   const pos = restoredExtra?.positions?.[p.id];
-  if (pos && !car.restoredFrom) { car.restoredFrom = pos; car.v.reset({ x: pos[0], z: pos[1], y: G.world.heightAt(pos[0], pos[1]) - 1, heading: pos[2] }); }
+  if (pos && !car.restoredFrom) { car.restoredFrom = pos; car.v.reset({ x: pos[0], z: pos[1], y: groundY(pos[0], pos[1]) - 1, heading: pos[2] }); }
   return car;
 }
 function savePositions() {
@@ -258,7 +309,9 @@ function savePositions() {
 function enterDriving() { G.phase = 'playing'; G.lobbyUi?.destroy(); G.lobbyUi = null; $('lobby').classList.add('hidden'); $('endParty').classList.remove('hidden'); showNet(); events.emit('mode', 'party'); }
 async function startParty() {
   if (G.mode) return;
-  G.mode = 'party'; G.phase = 'lobby'; $('start').classList.add('hidden'); $('lobby').classList.remove('hidden');
+  G.mode = 'party'; G.phase = 'lobby'; $('start').classList.add('hidden');
+  try { await switchToBigWorld(); } catch (e) { console.error(e); toast('Could not load the big world: ' + (e?.message || e), 8000); }
+  $('lobby').classList.remove('hidden');
   const { Peer } = await import('peerjs'); // loaded only when Party Mode starts
   const hostOpts = { transport: 'webrtc', maxPlayers: MAX_PLAYERS, vehicles: [DEFAULT_VEHICLE], playUrl: new URL('play.html', location.href).href, peerjs: { Peer } };
   const host = G.host = new PartyHost(hostOpts);
@@ -286,7 +339,7 @@ function sendFeedback() {
   if (!G.host) return;
   for (const c of G.cars.values()) {
     const tl = c.v.telemetry(), surf = dominantSurface(tl), rough = ['mud', 'gravel', 'sand'].includes(surf);
-    G.host.sendFeedback(c.id, { speed: Math.round(Math.abs(tl.speed) * 3.6), gear: tl.gear, surface: surf, rumble: rough ? Math.min(1, Math.abs(tl.speed) / 25) * 0.6 : 0, vehicle: DEFAULT_VEHICLE, colour: c.colour, cam: c.rig.mode, state: G.phase === 'playing' ? 'drive' : 'lobby' });
+    G.host.sendFeedback(c.id, { speed: Math.round(Math.abs(tl.speed) * 3.6), gear: tl.gear, surface: surf, rumble: rough ? Math.min(1, Math.abs(tl.speed) / 25) * 0.6 : 0, vehicle: DEFAULT_VEHICLE, colour: c.colour, cam: c.rig.mode, score: G.scoring.scores.get(c.id) || 0, state: G.phase === 'playing' ? 'drive' : 'lobby' });
   }
 }
 $('btnSolo').onclick = startSolo; $('btnParty').onclick = startParty;

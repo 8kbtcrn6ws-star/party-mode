@@ -86,7 +86,7 @@ function wire() {
   pc.on('status', (s) => { if (s !== 'reconnecting') clearInterval(reconnT); });
   pc.on('error', (e) => { $('err').textContent = e.message || String(e); if (e.fatal) banner(e.message); });
   pc.on('lobby', (l) => { $('phase').textContent = l.phase === 'playing' ? 'driving' : 'waiting for the TV to start'; });
-  pc.on('fb', (fb) => { if (fb.speed !== undefined) $('spd').textContent = `${fb.speed} km/h · gear ${fb.gear < 0 ? 'R' : fb.gear} · ${fb.surface}`; controls?.feedback?.(fb); });
+  pc.on('fb', (fb) => { if (fb.speed !== undefined) $('spd').textContent = `${fb.speed} km/h · gear ${fb.gear < 0 ? 'R' : fb.gear} · ${fb.surface}${fb.score !== undefined ? ' · ★ ' + fb.score : ''}`; controls?.feedback?.(fb); });
 }
 $('btnLeave').onclick = () => { pc?.leave(); location.reload(); };
 $('btnRetry').onclick = () => location.reload();   // the saved seat (sessionStorage) is reclaimed on reload, within the 90 s grace period
