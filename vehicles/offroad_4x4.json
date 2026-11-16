@@ -1,0 +1,160 @@
+{
+ "id": "offroad_4x4",
+ "displayName": "Dustrunner 4x4 (original design)",
+ "model": "offroad_4x4.glb",
+ "triangles": 4560,
+ "axes": {
+  "units": "metres",
+  "up": "+Y",
+  "forward": "+Z",
+  "left": "+X",
+  "note": "glTF export: vehicle faces +Z, its left side is +X. Origin on the ground midway between axles and wheels."
+ },
+ "dimensions_m": {
+  "length": 4.75,
+  "width": 1.96,
+  "height": 2.066
+ },
+ "suspensionGeometry": {
+  "wheelbase": 2.7,
+  "trackWidth": 1.62,
+  "wheelRadius": 0.41,
+  "wheelWidth": 0.32,
+  "hubHeightAtRest": 0.41,
+  "groundClearanceUnderBody": 0.34,
+  "tubUnderside": 0.42,
+  "wheelHubLocal": {
+   "Wheel_FL": [
+    0.81,
+    0.41,
+    1.35
+   ],
+   "Wheel_FR": [
+    -0.81,
+    0.41,
+    1.35
+   ],
+   "Wheel_RL": [
+    0.81,
+    0.41,
+    -1.35
+   ],
+   "Wheel_RR": [
+    -0.81,
+    0.41,
+    -1.35
+   ]
+  },
+  "note": "hub positions are the raycast wheel attachment points when the vehicle sits at rest on flat ground; model hubs are at y = wheelRadius"
+ },
+ "nodes": {
+  "body": "Body",
+  "wheels": [
+   "Wheel_FL",
+   "Wheel_FR",
+   "Wheel_RL",
+   "Wheel_RR"
+  ],
+  "steeringWheel": "SteeringWheel"
+ },
+ "wheelNodeRotation": "Wheel_*: pivot at hub, no baked rotation. Spin about local X, steer about local Y (apply steer first, then spin). Right-side wheels are mirrored geometry, so the same spin sign works on both sides.",
+ "steeringWheelNode": {
+  "pivot": [
+   0.38,
+   1.46,
+   0.25
+  ],
+  "restRotationQuat": [
+   -0.97273,
+   0.0,
+   0.0,
+   0.23193
+  ],
+  "spinAxis": "local +Z (column axis); multiply the rest rotation by rotateZ(angle). Driver seat is on the LEFT (x=+0.38).",
+  "hub": [
+   0.38,
+   1.46,
+   0.25
+  ]
+ },
+ "firstPersonEye": [
+  0.38,
+  1.5,
+  -0.3
+ ],
+ "collider": {
+  "type": "box",
+  "halfExtents": [
+   0.97,
+   0.68,
+   2.2
+  ],
+  "centre": [
+   0,
+   0.97,
+   0.0
+  ],
+  "note": "chassis box suggestion (width incl. flares, tub+cabin height, bumper to bumper); not part of the glb"
+ },
+ "materials": [
+  "Body",
+  "Chrome",
+  "Glass",
+  "Headlight",
+  "Rim",
+  "Tail_light",
+  "Trim",
+  "Tyre"
+ ],
+ "customisationNodes": "none yet (paint = Body material; wheels = Rim material); extra slots to be added in S7",
+ "stats": {
+  "_status": "STARTING VALUES ONLY, NOT TUNED. Forma's guesses so the physics owner has something to load; physics owner (SpaceX/Pixel) owns and should overwrite these.",
+  "mass": 2100,
+  "centreOfMass": [
+   0,
+   0.85,
+   0.05
+  ],
+  "driveLayout": "4WD",
+  "suspension": {
+   "restLength": 0.35,
+   "maxTravel": 0.3,
+   "stiffness": 60000,
+   "damping": 7500
+  },
+  "maxSteerAngleDeg": 32,
+  "engineTorqueCurveNmByRpm": [
+   [
+    1000,
+    320
+   ],
+   [
+    2500,
+    430
+   ],
+   [
+    4000,
+    450
+   ],
+   [
+    5500,
+    380
+   ],
+   [
+    6500,
+    300
+   ]
+  ],
+  "gearRatios": [
+   3.9,
+   2.3,
+   1.5,
+   1.0,
+   0.8
+  ],
+  "reverseGear": -3.6,
+  "finalDrive": 4.1,
+  "brakeTorquePerWheelNm": 3200,
+  "handbrakeLocksRear": true
+ }
+}
