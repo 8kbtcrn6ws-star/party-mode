@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Party Mode controller</title>
+<link rel="stylesheet" href="./src/controls/controls.css">
+<style>
+  html, body { margin: 0; height: 100%; background: #0b0f17; color: #f3f0e8; overflow: hidden; font: 500 16px/1.35 system-ui, -apple-system, "Segoe UI", sans-serif; overscroll-behavior: none; touch-action: none; }
+  .screen { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 16px; text-align: center; background: #0b0f17; }
+  .hidden { display: none !important; }
+  input { font: 600 20px system-ui; padding: 12px 14px; border-radius: 12px; border: 2px solid #243048; background: #121926; color: #f3f0e8; width: 14em; max-width: 80vw; text-align: center; }
+  button.big { font: 700 20px system-ui; margin-top: 14px; padding: 14px 30px; border: 0; border-radius: 14px; background: #f5b94a; color: #1a1206; }
+  #msg { color: #b8c1d3; max-width: 46ch; margin: 10px auto 0; } #err { color: #ff7a6b; max-width: 46ch; margin: 10px auto 0; }
+  #bar { position: fixed; z-index: 35; left: 8px; top: 6px; right: 8px; display: flex; gap: 10px; align-items: center; font: 600 12px system-ui; pointer-events: none; text-shadow: 0 1px 3px #000; }
+  #bar .chip { width: 12px; height: 12px; border-radius: 50%; } #bar .sp { margin-left: auto; font-size: 18px; font-variant-numeric: tabular-nums; }
+  #banner { position: fixed; z-index: 50; left: 50%; top: 40px; transform: translateX(-50%); background: #000c; padding: 8px 14px; border-radius: 10px; font-size: 14px; max-width: 80vw; text-align: center; }
+</style>
+<!-- Same pinned import map as index.html / game/LIBS.md -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/",
+    "@dimforge/rapier3d-compat": "https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.21.0/dist/rapier.mjs",
+    "peerjs": "https://cdn.jsdelivr.net/npm/peerjs@1.5.5/+esm",
+    "qrcode-generator": "https://cdn.jsdelivr.net/npm/qrcode-generator@2.0.4/dist/qrcode.mjs",
+    "/npm/peerjs-js-binarypack@2.1.0/+esm": "https://cdn.jsdelivr.net/npm/peerjs-js-binarypack@2.1.0/+esm",
+    "/npm/webrtc-adapter@9.0.3/+esm": "https://cdn.jsdelivr.net/npm/webrtc-adapter@9.0.3/+esm",
+    "/npm/sdp@3.2.0/+esm": "https://cdn.jsdelivr.net/npm/sdp@3.2.0/+esm",
+    "/npm/@msgpack/msgpack@2.8.0/+esm": "https://cdn.jsdelivr.net/npm/@msgpack/msgpack@2.8.0/+esm"
+  }
+}
+</script>
+</head>
+<body>
+<div id="join" class="screen">
+  <div>
+    <h1 style="margin:0 0 8px">Join the party</h1>
+    <div><input id="name" maxlength="16" placeholder="Your name" autocomplete="nickname"></div>
+    <button class="big" id="btnJoin">Join</button>
+    <p id="msg">Scan the QR code on the TV to get here.</p>
+    <p id="err"></p>
+  </div>
+</div>
+<div id="bar" class="hidden"><span class="chip" id="chip"></span><span id="who"></span><span id="phase"></span><span class="sp" id="spd"></span></div>
+<div id="banner" class="hidden"></div>
+<div id="reconn" class="screen hidden" style="background:rgba(7,10,16,.8)"><div><h2>Reconnecting…</h2><p id="reconnWhy" style="font-weight:600"></p><p>Your car is parked. We will pick up where you left off.</p><button class="big" id="btnRetry">Try again now</button><br><button class="big" id="btnLeave" style="background:#243048;color:#f3f0e8">Leave party</button></div></div>
+
+<script type="module">
+import { PartyController, parseJoinUrl, ERR } from './src/net/index.js';
+import { createTouchControls } from './src/controls/touch.js';
+import { createWheelControls } from './src/controls/wheel.js';
+import { createSaveManager } from './src/data/index.js';
+
+const $ = (id) => document.getElementById(id);
+const params = new URLSearchParams(location.search);
+const banner = (t) => { const b = $('banner'); if (t) { b.textContent = t; b.classList.remove('hidden'); } else b.classList.add('hidden'); };
+
+const data = createSaveManager(); data.load();
+let settings = data.profile.settings;
+
+const link = parseJoinUrl(location.href);                   // #peer=pm-... (QR) or ?code=...
+const DEFAULT_VEHICLE = 'offroad_4x4';
+let pc = null, controls = null, currentMode = 'touch', injected = null;
+window.__play = { get pc() { return pc; }, get mode() { return currentMode; }, get controls() { return controls; }, inject(s) { injected = s; }, get link() { return link; } }; // injected = QA hook only
+
+function showControls(mode, note) {
+  controls?.dispose(); currentMode = mode;
+  if (mode === 'wheel') controls = createWheelControls(document.body, settings.controls, { onFallback: (reason, text) => { showControls('touch'); banner(text); } });
+  else controls = createTouchControls(document.body, settings.controls, { onLayoutChange: (layout) => data.updateSettings({ controls: { layout } }) });
+  if (note) banner(note);
+}
+
+function wire() {
+  pc.on('status', (s) => {
+    $('reconn').classList.toggle('hidden', s !== 'reconnecting');
+    if (s === 'closed') banner('Disconnected from the TV.'); else banner('');
+  });
+  // placeholder banner: reason + how long we have been trying + how long the TV holds the seat (Forge: reconnecting {reason, since, graceMs})
+  let reconnT = 0;
+  pc.on('reconnecting', ({ reason, since, graceMs } = {}) => {
+    const upd = () => { const left = Math.max(0, Math.round(((graceMs || 90000) - (Date.now() - (since || Date.now()))) / 1000)); $('reconnWhy').textContent = `${reason || 'connection lost'} · seat held ${left}s`; };
+    clearInterval(reconnT); upd(); reconnT = setInterval(upd, 1000);
+  });
+  pc.on('status', (s) => { if (s !== 'reconnecting') clearInterval(reconnT); });
+  pc.on('error', (e) => { $('err').textContent = e.message || String(e); if (e.fatal) banner(e.message); });
+  pc.on('lobby', (l) => { $('phase').textContent = l.phase === 'playing' ? 'driving' : 'waiting for the TV to start'; });
+  pc.on('fb', (fb) => { if (fb.speed !== undefined) $('spd').textContent = `${fb.speed} km/h · gear ${fb.gear < 0 ? 'R' : fb.gear} · ${fb.surface}`; controls?.feedback?.(fb); });
+}
+$('btnLeave').onclick = () => { pc?.leave(); location.reload(); };
+$('btnRetry').onclick = () => location.reload();   // the saved seat (sessionStorage) is reclaimed on reload, within the 90 s grace period
+
+async function join() {
+  if (!pc) { const { Peer } = await import('peerjs'); pc = new PartyController({ url: location.href, name: undefined, vehicle: DEFAULT_VEHICLE, peerjs: { Peer } }); wire(); } // peerjs is loaded on the Join tap
+  $('err').textContent = ''; $('btnJoin').disabled = true;
+  const name = $('name').value.trim() || undefined;
+  if (name) pc.profile.name = name;
+  try {
+    const w = await pc.connect();
+    $('join').classList.add('hidden'); $('bar').classList.remove('hidden');
+    const me = w.you || {}; $('who').textContent = me.name || ''; $('chip').style.background = me.colour || '#888';
+    // wheel (tilt) where the phone has motion sensors, touch otherwise; ?mode= overrides. The wheel's own "Tap to start steering" button asks for motion permission.
+    const want = params.get('mode') || (matchMedia('(pointer: coarse)').matches && 'DeviceOrientationEvent' in window ? 'wheel' : 'touch');
+    showControls(want);
+    pc.startInputLoop(() => ({ ...controls.read(), ...(injected || {}), mode: currentMode }), 30);
+    pc.ready(true);
+  } catch (e) { $('err').textContent = e.message || String(e); $('btnJoin').disabled = false; }
+}
+$('btnJoin').onclick = join;
+if (!link.peer && !link.code) { $('msg').textContent = 'This page needs the join link from the TV. Scan the QR code shown on the TV.'; $('btnJoin').disabled = true; }
+else if (sessionStorage.getItem('pm.session.' + link.peer)) { $('msg').textContent = 'Rejoining your seat…'; join(); }
+else if (params.has('autojoin')) { $('name').value = params.get('autojoin') || ''; join(); }
+window.__ready = true;
+</script>
+</body>
+</html>

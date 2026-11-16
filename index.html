@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Off-road open world (Party Mode host and solo)</title>
+<link rel="stylesheet" href="./src/controls/controls.css">
+<style>
+  html, body { margin: 0; height: 100%; background: #0b0f17; color: #f3f0e8; overflow: hidden; font: 500 16px/1.35 system-ui, -apple-system, "Segoe UI", sans-serif; overscroll-behavior: none; }
+  canvas#c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  .screen { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: rgba(7, 10, 16, .55); text-align: center; padding: 16px; }
+  .hidden { display: none !important; }
+  .panel { background: rgba(18, 25, 38, .92); border: 1px solid rgba(255, 255, 255, .16); border-radius: 20px; padding: 24px 28px; max-width: min(92vw, 760px); }
+  h1 { margin: 0 0 4px; font-size: 34px; } h2 { margin: 0 0 12px; font-size: 24px; }
+  p { margin: 6px 0; color: #b8c1d3; }
+  button.big { font: 700 20px system-ui, sans-serif; margin: 10px 8px 0; padding: 14px 28px; border: 0; border-radius: 14px; background: #f5b94a; color: #1a1206; cursor: pointer; }
+  button.big.alt { background: #243048; color: #f3f0e8; }
+  button.big:disabled { opacity: .45; cursor: default; }
+  #views { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
+  .hud { position: absolute; padding: 10px 14px; font: 700 14px/1.25 system-ui, sans-serif; text-shadow: 0 1px 3px #000c; }
+  .hud .spd { font-size: 34px; font-variant-numeric: tabular-nums; } .hud .nm { display: flex; gap: 8px; align-items: center; }
+  .hud .chip { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+  .hud .sub { font-weight: 500; opacity: .9; }
+  #toast { position: fixed; z-index: 60; left: 50%; top: 14px; transform: translateX(-50%); background: #000c; padding: 8px 14px; border-radius: 10px; font-size: 14px; max-width: 80vw; }
+  #err { color: #ff7a6b; }
+  .pm-modal[hidden] { display: none !important; } /* workaround for a Pixel bug: tv.css display:flex beats [hidden], so the invisible modal swallowed every click on Start/Leave */
+  #lobby { position: fixed; inset: 0; z-index: 45; }
+  #netstat { position: fixed; z-index: 55; left: 50%; bottom: 18px; transform: translateX(-50%); background: #000d; border: 1px solid #fff3; padding: 10px 18px; border-radius: 12px; font-size: 16px; text-align: center; }
+  #endParty { position: fixed; z-index: 55; right: 12px; top: 10px; font: 600 13px system-ui, sans-serif; padding: 8px 14px; border: 1px solid #fff4; border-radius: 10px; background: #000a; color: #f3f0e8; cursor: pointer; }
+</style>
+<!-- Pinned libraries: identical to game/LIBS.md and tests/fixtures/importmap.json (Kiwi). Keep the four /npm/ lines: WebKit needs them. -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/",
+    "@dimforge/rapier3d-compat": "https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.21.0/dist/rapier.mjs",
+    "peerjs": "https://cdn.jsdelivr.net/npm/peerjs@1.5.5/+esm",
+    "qrcode-generator": "https://cdn.jsdelivr.net/npm/qrcode-generator@2.0.4/dist/qrcode.mjs",
+    "/npm/peerjs-js-binarypack@2.1.0/+esm": "https://cdn.jsdelivr.net/npm/peerjs-js-binarypack@2.1.0/+esm",
+    "/npm/webrtc-adapter@9.0.3/+esm": "https://cdn.jsdelivr.net/npm/webrtc-adapter@9.0.3/+esm",
+    "/npm/sdp@3.2.0/+esm": "https://cdn.jsdelivr.net/npm/sdp@3.2.0/+esm",
+    "/npm/@msgpack/msgpack@2.8.0/+esm": "https://cdn.jsdelivr.net/npm/@msgpack/msgpack@2.8.0/+esm"
+  }
+}
+</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="views"></div>
+
+<!-- Start screen: a simple placeholder; Prism's design replaces it later. -->
+<div id="start" class="screen">
+  <div class="panel">
+    <h1>Off-road open world</h1>
+    <p id="loadMsg">Loading the world…</p>
+    <p id="err"></p>
+    <div id="startBtns" class="hidden">
+      <button class="big" id="btnSolo">Solo</button>
+      <button class="big alt" id="btnParty">Party Mode</button>
+      <p>Solo: W/S accelerate and brake, A/D steer, Space handbrake, C camera, R reset (touch controls on phones).<br>Party Mode: this screen is the TV, friends scan a QR code and their phones become steering wheels.</p>
+    </div>
+  </div>
+</div>
+
+<div id="lobby" class="hidden"></div>
+<div id="toast" class="hidden"></div>
+<div id="netstat" class="hidden" role="status" aria-live="polite"></div>
+<button id="endParty" class="hidden">End party</button>
+
+<script type="module">
+import * as THREE from 'three';
+import { initPhysics, createPhysicsWorld, createVehicle, loadVehicleStats } from './src/physics/index.js';
+import { createRenderer, renderFrame, resize, setViews, setTier, setTimeOfDay, getState } from './src/render/index.js';
+import { createWorldLook } from './src/render/world-look.js'; // Vanta: textured terrain + water (not re-exported by render/index.js yet)
+import * as RenderApi from './src/render/index.js'; // pickLod is used if Vanta exports it, else core/lod.js
+import { PartyHost } from './src/net/index.js';
+import { createKeyboard } from './src/controls/keyboard.js';
+import { createTouchControls } from './src/controls/touch.js';
+import { createCameraRig, CAMERA_LABELS } from './src/controls/cameras.js';
+import { combineInputs } from './src/controls/input.js';
+import { createSaveManager } from './src/data/index.js';
+import { MAX_PLAYERS, FEEDBACK_HZ, DEFAULT_VEHICLE, VEHICLE_STATS_URL, WORLD_URL, resolveTier } from './src/core/config.js';
+import { createLoop } from './src/core/loop.js';
+import { events } from './src/core/events.js';
+import { createSoftBoundary } from './src/core/boundary.js';
+import { loadWorld } from './src/core/world.js';
+import { createLobby } from './src/ui/lobby.js'; // Pixel's TV lobby (core/lobby.js is the old stand-in, kept as a fallback)
+import { loadVehicleModel, createVehicleVisual } from './src/core/vehicle-visual.js';
+
+const $ = (id) => document.getElementById(id);
+const params = new URLSearchParams(location.search);
+const toast = (msg, ms = 3500) => { const t = $('toast'); t.textContent = msg; t.classList.remove('hidden'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.add('hidden'), ms); };
+
+// ---- settings (JARVIS): sensitivity, camera and tier come from the saved profile ----
+const data = createSaveManager(); data.load(); data.startAutosave();
+let settings = data.profile.settings;
+data.on?.('change', (e) => { if (e.what === 'settings') settings = data.profile.settings; });
+
+const G = { mode: null, phase: 'menu', cars: new Map(), host: null, world: null, pw: null, stats: null, template: null, loop: null, feedbackTimer: 0, kb: null, touch: null, touchMs: 0 };
+window.__game = G;
+
+// ---- boot ----
+let scene, attractCam, hudTimer = 0, streamT = 0, look = null;
+async function boot() {
+  await initPhysics();
+  G.pw = createPhysicsWorld();
+  const canvas = $('c');
+  let renderer; ({ scene, renderer } = createRenderer(canvas, { tier: resolveTier(settings, 1), hours: Number(params.get('t') ?? 11) }));
+  resize(innerWidth, innerHeight);
+  addEventListener('resize', () => resize(innerWidth, innerHeight));
+  addEventListener('keydown', (e) => { if (e.code === 'KeyT' && !e.repeat) setTimeOfDay(getState().hours + 1); }); // debug: time of day
+  look = params.get('look') === '0' ? null : createWorldLook(renderer);
+  const [world, stats, template] = await Promise.all([
+    loadWorld(WORLD_URL, { physicsWorld: G.pw.world, onChunk: (root, c) => look?.dressChunk(root, { ix: c.ix, iz: c.iz }), ...(RenderApi.pickLod ? { pickLod: RenderApi.pickLod } : {}) }),
+    loadVehicleStats(VEHICLE_STATS_URL(DEFAULT_VEHICLE)),
+    loadVehicleModel(`./vehicles/${DEFAULT_VEHICLE}.glb`),
+  ]);
+  G.world = world; G.stats = stats; G.template = template;
+  G.boundary = params.get('boundary') === '0' ? null : createSoftBoundary({ size: world.size ?? 512 });
+  scene.add(world.group);
+  attractCam = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 2500);
+  G.loop = createLoop({ step, render });
+  G.loop.start();
+  $('loadMsg').textContent = `World loaded: ${world.meta.name}, ${world.meta.chunks.length} chunks.`;
+  $('startBtns').classList.remove('hidden');
+  window.__ready = true;
+  events.emit('ready');
+  const auto = params.get('mode');
+  if (auto === 'solo') startSolo(); else if (auto === 'party' || (!auto && PartyHost.peekSavedSession({ transport: 'webrtc' }))) startParty(); // a saved party means the TV was reloaded: restore it
+}
+
+// ---- cars ----
+function addCar(id, { name, colour, slot, source }) {
+  if (G.cars.has(id)) return G.cars.get(id);
+  const spawn = G.world.spawns[slot % G.world.spawns.length];
+  const v = G.pw.add(createVehicle(G.pw.world, G.stats, spawn));
+  const visual = createVehicleVisual(G.template, colour);
+  scene.add(visual.group);
+  const camera = new THREE.PerspectiveCamera(settings.camera.fov, 16 / 9, 0.1, 2500);
+  const rig = createCameraRig(camera, { forward: new THREE.Vector3(0, 0, 1), driverEye: new THREE.Vector3(v.driverEye.x, v.driverEye.y, v.driverEye.z), mode: settings.camera.mode, fov: settings.camera.fov });
+  const hud = document.createElement('div'); hud.className = 'hud'; $('views').appendChild(hud);
+  const car = { id, name, colour, slot, source, v, visual, camera, rig, hud, lastInput: null, prevCam: false, prevReset: false, feedbackAt: 0 };
+  G.cars.set(id, car);
+  syncViews();
+  return car;
+}
+function removeCar(id) {
+  const c = G.cars.get(id); if (!c) return;
+  G.pw.remove(c.v); G.pw.world.removeRigidBody(c.v.body); c.visual.dispose(); c.hud.remove(); G.cars.delete(id); syncViews();
+}
+function syncViews() {
+  const n = Math.max(1, Math.min(4, G.cars.size)); setViews(n);
+  const want = resolveTier(settings, n); if (getState().tier !== want) setTier(want);
+  const cells = n === 1 ? [[0, 0, 1, 1]] : n === 2 ? [[0, 0, .5, 1], [.5, 0, .5, 1]] : [[0, 0, .5, .5], [.5, 0, .5, .5], [0, .5, .5, .5], [.5, .5, .5, .5]];
+  [...G.cars.values()].forEach((c, i) => { const [x, y, w, h] = cells[i] || cells[0]; Object.assign(c.hud.style, { left: x * 100 + '%', top: y * 100 + '%', width: w * 100 + '%', height: h * 100 + '%' }); });
+}
+
+// ---- fixed 60 Hz step: inputs -> vehicles -> physics ----
+const ZERO = { steer: 0, throttle: 0, brake: 0, rev: 0, hand: 0, horn: 0, look: null };
+function step(dt) {
+  for (const c of G.cars.values()) {
+    const r = c.source(dt);                       // { input, camEdge, resetEdge }
+    c.lastInput = r.input;
+    if (r.camEdge) { if (r.input.cam === 'view') c.rig.toggleFirstPerson(); else c.rig.next(); } // 'view' = cab <-> last third-person view (one camEdge per pulse)
+    let inp = r.input;
+    if (G.boundary) {
+      const pz = c.v.pose(), back = G.boundary.rescue(pz);
+      if (back) c.v.reset({ ...back, y: G.world.heightAt(back.x, back.z) - 1, heading: Math.atan2(G.boundary.size / 2 - back.x, G.boundary.size / 2 - back.z) });
+      else inp = G.boundary.apply(inp, pz);   // soft edge: throttle fades and steering turns the car back toward the centre
+    }
+    c.v.applyInput({ ...inp, reset: 0 });
+    if (r.resetEdge) c.v.reset();
+    c.v.update(dt, G.world.surfaceAt);
+  }
+  G.pw.world.step();
+  G.probe?.(dt);
+}
+
+// ---- render once per frame, interpolated ----
+const focus = [];
+function render(alpha, dt) {
+  const cams = []; focus.length = 0;
+  for (const c of G.cars.values()) {
+    const pose = c.v.pose(alpha), wp = c.v.wheelPoses(alpha);
+    c.visual.update(pose, wp);
+    c.rig.update(dt, { position: pose.position, quaternion: pose.quaternion }, c.lastInput?.look || null, G.world.heightAt, { zoom: c.lastInput?.zoom || 0, glance: c.lastInput?.glance || null });
+    cams.push(c.camera); focus.push(new THREE.Vector3(pose.position.x, pose.position.y, pose.position.z));
+  }
+  if (!cams.length) { // menu / lobby: slow flyover of the spawn area
+    const t = performance.now() / 1000 * 0.1, s = G.world.spawns[0];
+    attractCam.position.set(s.x + Math.cos(t) * 45, s.y + 14, s.z + Math.sin(t) * 45); attractCam.lookAt(s.x, s.y + 1, s.z);
+    cams.push(attractCam); focus.push(new THREE.Vector3(s.x, s.y, s.z));
+  }
+  look?.update(dt);
+  if ((streamT += dt) > 0.25) { streamT = 0; G.world.stream(focus.map((f) => ({ x: f.x, z: f.z }))); }
+  renderFrame(cams, focus, dt);
+  if ((hudTimer += dt) > 0.1) { hudTimer = 0; updateHud(); }
+}
+function dominantSurface(tl) { const n = {}; let best = 'dirt', bc = 0; for (const s of tl.surfaces) { n[s] = (n[s] || 0) + 1; if (n[s] > bc) { bc = n[s]; best = s; } } return tl.surfaces.includes('water') ? 'water' : best; }
+function updateHud() {
+  for (const c of G.cars.values()) {
+    const tl = c.v.telemetry(), kmh = Math.abs(tl.speed) * 3.6;
+    c.hud.innerHTML = `<div class="nm"><span class="chip" style="background:${c.colour}"></span>${c.name}</div><div class="spd">${kmh.toFixed(0)} <small>km/h</small></div>` +
+      `<div class="sub">gear ${tl.gear < 0 ? 'R' : tl.gear} · ${dominantSurface(tl)} · ${CAMERA_LABELS[c.rig.mode]}${c.v.stalled ? ' · STALLED' : ''}</div>`;
+  }
+}
+
+// QA hook (not used by the game): a parked car with no input source at a given spot, for the streaming test.
+G.debugAddCar = (id, { x, z, heading = 0, colour = '#ffffff' }) => {
+  const car = addCar(id, { name: id, colour, slot: 0, source: () => ({ input: car.debugInput || ZERO, camEdge: false, resetEdge: false }) });
+  car.v.reset({ x, z, y: G.world.heightAt(x, z) + 0.2, heading }); car.v.reset({ x, z, y: G.world.heightAt(x, z) - 1.0, heading });
+  return car;
+};
+
+// ---- Solo ----
+const edge = (name, car, on) => { const was = car[name]; car[name] = on; return on && !was; };
+function startSolo() {
+  if (G.mode) return;
+  G.mode = 'solo'; G.phase = 'playing'; $('start').classList.add('hidden');
+  G.kb = createKeyboard(window);
+  if (matchMedia('(pointer: coarse)').matches || params.has('touch')) {
+    G.touch = createTouchControls(document.body, settings.controls, { onLayoutChange: (layout) => data.updateSettings({ controls: { layout } }) });
+  }
+  const car = addCar('solo', {
+    name: 'You', colour: '#ff7a59', slot: 0,
+    source: (dt) => {
+      const i = combineInputs(G.kb.read(dt), G.touch?.read(dt));
+      return { input: i, camEdge: edge('prevCam', car, i.cam === 'next'), resetEdge: edge('prevReset', car, !!i.reset) };
+    },
+  });
+  events.emit('mode', 'solo');
+}
+
+// ---- Party Mode (host) ----
+const netLine = { net: '', progress: '' };
+function showNet() {
+  const t = [netLine.net, netLine.progress].filter(Boolean).join(' · '), el = $('netstat');
+  el.textContent = t; el.classList.toggle('hidden', !t || G.phase !== 'playing');
+}
+// Cars come from the seat list. On a restored TV reload they go back to the positions saved with setSessionExtra (never any input data).
+function carFromPlayer(p, restoredExtra) {
+  const host = G.host;
+  const car = addCar(p.id, {
+    name: p.name, colour: p.colour, slot: p.slot,
+    source: () => { const i = host.getInput(p.id); return { input: i, camEdge: !!i.camEdge, resetEdge: !!i.resetEdge }; },
+  });
+  const pos = restoredExtra?.positions?.[p.id];
+  if (pos && !car.restoredFrom) { car.restoredFrom = pos; car.v.reset({ x: pos[0], z: pos[1], y: G.world.heightAt(pos[0], pos[1]) - 1, heading: pos[2] }); }
+  return car;
+}
+function savePositions() {
+  if (!G.host || G.phase !== 'playing') return;
+  const positions = {};
+  for (const c of G.cars.values()) { const q = c.v.pose(), f = q.forward; positions[c.id] = [+q.position.x.toFixed(1), +q.position.z.toFixed(1), +Math.atan2(f.x, f.z).toFixed(3)]; }
+  G.host.setSessionExtra({ positions });
+}
+function enterDriving() { G.phase = 'playing'; G.lobbyUi?.destroy(); G.lobbyUi = null; $('lobby').classList.add('hidden'); $('endParty').classList.remove('hidden'); showNet(); events.emit('mode', 'party'); }
+async function startParty() {
+  if (G.mode) return;
+  G.mode = 'party'; G.phase = 'lobby'; $('start').classList.add('hidden'); $('lobby').classList.remove('hidden');
+  const { Peer } = await import('peerjs'); // loaded only when Party Mode starts
+  const hostOpts = { transport: 'webrtc', maxPlayers: MAX_PLAYERS, vehicles: [DEFAULT_VEHICLE], playUrl: new URL('play.html', location.href).href, peerjs: { Peer } };
+  const host = G.host = new PartyHost(hostOpts);
+  G.peeked = PartyHost.peekSavedSession({ transport: 'webrtc' }); // the old code/QR is drawn by the lobby straight away (it calls peek itself)
+  G.lobbyUi = createLobby($('lobby'), host, { onStart: startDriving, onLeave: endParty });
+  let restoredExtra = null;
+  host.on('status', (s) => { netLine.net = s === 'open' ? '' : s === 'restoring' ? 'Restoring the party…' : s === 'reconnecting' ? 'Reconnecting…' : s; showNet(); events.emit('net-status', s); });
+  host.on('restore-progress', ({ seats, connected }) => { netLine.progress = connected < seats ? `Waiting for phones ${connected}/${seats}` : ''; showNet(); });
+  host.on('restored', (r) => { restoredExtra = r.extra; if (r.started) enterDriving(); });
+  host.on('join', (id, name, player, meta) => { toast(meta?.restored ? `${name} is back` : `${name} joined`); if (G.phase === 'playing') carFromPlayer(player, meta?.restored ? restoredExtra : null); });
+  host.on('leave', (id, reason) => { toast(`${id} left (${reason})`); removeCar(id); });
+  try { const info = await host.open(); G.joinUrl = info.joinUrl; events.emit('lobby-open', info); }
+  catch (e) { console.error(e); return; }
+  G.feedbackTimer = setInterval(sendFeedback, 1000 / FEEDBACK_HZ);
+  G.saveTimer = setInterval(savePositions, 3000);
+}
+function endParty() { try { G.host?.end(); } catch (e) { console.error(e); } location.assign(location.pathname); }
+$('endParty').onclick = endParty;
+function startDriving() {
+  G.host.startGame();
+  for (const p of G.host.players()) if (p.connected) carFromPlayer(p);
+  enterDriving();
+}
+function sendFeedback() {
+  if (!G.host) return;
+  for (const c of G.cars.values()) {
+    const tl = c.v.telemetry(), surf = dominantSurface(tl), rough = ['mud', 'gravel', 'sand'].includes(surf);
+    G.host.sendFeedback(c.id, { speed: Math.round(Math.abs(tl.speed) * 3.6), gear: tl.gear, surface: surf, rumble: rough ? Math.min(1, Math.abs(tl.speed) / 25) * 0.6 : 0, vehicle: DEFAULT_VEHICLE, colour: c.colour, cam: c.rig.mode, state: G.phase === 'playing' ? 'drive' : 'lobby' });
+  }
+}
+$('btnSolo').onclick = startSolo; $('btnParty').onclick = startParty;
+
+boot().catch((e) => { console.error(e); $('loadMsg').textContent = 'Could not start the game.'; $('err').textContent = String(e?.message || e); });
+</script>
+</body>
+</html>
