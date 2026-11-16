@@ -1,0 +1,181 @@
+/* Phone controllers (touch HUD + wheel + rotate prompt), built to Prism's specs (ui/DESIGN.md sections 1, 2, 3 and Global rules).
+   Tokens, fonts and type come from ../ui (imported below). Everything is namespaced .pc-* / .pw-* so host pages keep their own CSS.
+   Units are CSS px = pt. Layout anchors to the safe frame (--safe-t/r/b/l = max(env(safe-area-inset-*), 8px)). */
+@import url("../ui/tokens.css");
+@import url("../ui/fonts.css");
+@import url("../ui/type.css");
+
+.pc-root { position: fixed; inset: 0; z-index: 20; overflow: hidden; touch-action: none; overscroll-behavior: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
+  font-family: var(--font-ui); color: var(--color-text); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; font-feature-settings: "tnum" 1, "cv11" 1; }
+.pc-root *, .pc-root *::before, .pc-root *::after { box-sizing: border-box; }
+.pc-root .ic { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+:where(.pc-root) button { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; cursor: pointer; }
+.pc-frame { position: absolute; left: var(--safe-l); right: var(--safe-r); top: var(--safe-t); bottom: var(--safe-b); pointer-events: none; visibility: hidden; }
+.pc-zone { position: absolute; top: 0; bottom: 0; }
+.pc-wheel { background: radial-gradient(60% 90% at 50% 45%, #16203A 0%, var(--color-bg) 70%); }
+.pc-scrim { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgba(7,10,16,.45), rgba(7,10,16,0) 28%, rgba(7,10,16,0) 62%, rgba(7,10,16,.55)); }
+.pc-root.is-lost > .pc-el, .pc-root.is-lost > .pw-wheel, .pc-root.is-lost > .pw-tilt, .pc-root.is-lost > .pw-readout { opacity: .4; }
+.pc-root.is-lost > .pc-el { pointer-events: none; }
+
+/* ---- every control is absolutely placed by layout() (px, from the anchors in Prism's spec) ---- */
+.pc-el { position: absolute; left: 0; top: 0; }
+
+/* Round and rect button (pbtn): 48 min, radius 12 or round, Inter 700 13 caps, icon 22. */
+.pc-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: var(--radius-md); background: var(--color-surface-raised); color: var(--color-text);
+  font-family: var(--type-phone-label-family); font-weight: 700; font-size: 13px; line-height: 1; letter-spacing: .06em; text-transform: uppercase;
+  box-shadow: inset 0 0 0 2px var(--color-border-strong); transition: transform var(--dur-instant) var(--ease-standard), background var(--dur-instant), box-shadow var(--dur-instant); outline: 0; }
+.pc-btn .ic { font-size: 22px; }
+.pc-btn.round { border-radius: 50%; }
+.pc-btn.is-pressed { transform: scale(.96); background: var(--color-surface-high); box-shadow: inset 0 0 0 2px var(--color-text-2), var(--shadow-inset-press); }
+.pc-btn:focus-visible, .pc-pedal:focus-visible, .pc-plate:focus-visible { box-shadow: var(--focus-ring-phone); }
+.pc-btn.is-on { background: var(--color-trail); color: var(--color-on-trail); box-shadow: none; }
+.pc-btn.danger.is-on { background: var(--color-danger); color: var(--color-on-danger); }
+.pc-btn.glass { background: var(--color-scrim); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.28); }
+.pc-btn.glass.is-pressed { background: var(--color-surface-high); }
+.pc-btn.glass.is-on { background: var(--color-trail); color: var(--color-on-trail); box-shadow: none; }
+.pc-btn.glass.danger.is-on { background: var(--color-danger); color: var(--color-on-danger); }
+.pc-btn.primary { background: var(--color-accent); color: var(--color-on-accent); box-shadow: none; }
+.pc-btn.primary.is-pressed { background: var(--color-accent-strong); box-shadow: var(--shadow-inset-press); }
+.pc-btn.stack { flex-direction: column; gap: 2px; font-size: 12px; }
+.pc-btn.stack .ic { font-size: 20px; }
+
+/* Pedal: wheel mode 176x215 radius 32; touch HUD gas 96x156 / brake 72x96 radius 20 (.sm). Grip ribs. */
+.pc-pedal { border-radius: 32px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 8px; padding-bottom: 20px; overflow: hidden;
+  font-family: var(--type-phone-control-family); font-weight: 700; font-size: 16px; line-height: 20px; letter-spacing: .06em; text-transform: uppercase; transition: transform var(--dur-instant) var(--ease-standard); outline: 0; }
+.pc-pedal .ic { font-size: 36px; }
+.pc-pedal::before { content: ""; position: absolute; inset: 14px 14px auto 14px; height: calc(100% - 92px); border-radius: 20px; background: repeating-linear-gradient(0deg, rgba(0,0,0,.20) 0 3px, transparent 3px 14px); opacity: .55; pointer-events: none; }
+.pc-pedal.gas { background: linear-gradient(180deg, #F8C766, var(--color-accent)); color: var(--color-on-accent); box-shadow: var(--shadow-2); }
+.pc-pedal.brake { background: var(--color-surface-high); color: var(--color-danger); box-shadow: inset 0 0 0 3px var(--color-danger), var(--shadow-2); }
+.pc-pedal.is-pressed { transform: scale(.965); }
+.pc-pedal.gas.is-pressed { background: linear-gradient(180deg, var(--color-accent), var(--color-accent-strong)); box-shadow: var(--shadow-inset-press); }
+.pc-pedal.brake.is-pressed { background: var(--color-danger); color: var(--color-on-danger); box-shadow: var(--shadow-inset-press); }
+.pc-pedal.sm { border-radius: 20px; font-size: 13px; line-height: 16px; padding-bottom: 12px; gap: 4px; }
+.pc-pedal.sm .ic { font-size: 28px; }
+.pc-pedal.sm::before { inset: 10px 10px auto 10px; height: calc(100% - 64px); border-radius: 12px; }
+.pc-pedal.brake.glassy { background: rgba(36,48,72,.92); }
+.pc-pedal.brake.glassy.is-pressed { background: var(--color-danger); }
+
+/* HUD plates: scrim 60% + blur 8 + 1px white 16% */
+.pc-plate { background: var(--color-scrim); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border-radius: var(--radius-md); box-shadow: inset 0 0 0 1px var(--color-white-a16); }
+.pc-plate.pc-edge { box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.28); }
+.pc-label { font-family: var(--type-phone-label-family); font-size: var(--type-phone-label-size); line-height: var(--type-phone-label-line); font-weight: var(--type-phone-label-weight); letter-spacing: var(--type-phone-label-tracking); text-transform: uppercase; }
+.pc-caption { font-family: var(--type-phone-caption-family); font-size: var(--type-phone-caption-size); line-height: var(--type-phone-caption-line); font-weight: var(--type-phone-caption-weight); letter-spacing: var(--type-phone-caption-tracking); }
+.pc-body { font-family: var(--type-phone-body-family); font-size: var(--type-phone-body-size); line-height: var(--type-phone-body-line); font-weight: var(--type-phone-body-weight); letter-spacing: var(--type-phone-body-tracking); }
+.pc-h1 { font-family: var(--type-phone-h1-family); font-size: var(--type-phone-h1-size); line-height: var(--type-phone-h1-line); font-weight: var(--type-phone-h1-weight); letter-spacing: var(--type-phone-h1-tracking); }
+.pc-h2 { font-family: var(--type-phone-h2-family); font-size: var(--type-phone-h2-size); line-height: var(--type-phone-h2-line); font-weight: var(--type-phone-h2-weight); letter-spacing: var(--type-phone-h2-tracking); }
+.pc-speed { font-family: var(--type-phone-speed-family); font-size: var(--type-phone-speed-size); line-height: var(--type-phone-speed-line); font-weight: var(--type-phone-speed-weight); letter-spacing: var(--type-phone-speed-tracking); }
+
+/* Player tag: 36h pill, shape + "P2 Maya" + room code (mono) */
+.pc-tag { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: var(--radius-pill); background: var(--color-surface-raised); font: 600 13px/1 var(--font-ui); letter-spacing: .04em; color: var(--color-text); white-space: nowrap; transition: opacity var(--dur-fast); }
+.pc-tag .code { font-family: var(--font-mono); letter-spacing: .12em; }
+.pc-tag .sep { color: var(--color-text-3); }
+.pc-dot { display: inline-block; width: 12px; height: 12px; background: var(--p); border-radius: 50%; flex: none; }
+.pc-dot.triangle { border-radius: 2px; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.pc-dot.square { border-radius: 2px; }
+.pc-dot.diamond { border-radius: 2px; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+.pc-root.has-toast .pc-tag { opacity: 0; }
+
+/* Toast (discovery on the HUD, camera / "Centred" captions elsewhere). Enter 220 ms slide-down. */
+.pc-toast { position: absolute; left: 0; top: 0; display: flex; align-items: center; gap: 12px; height: 56px; padding: 0 16px 0 10px; border-radius: 28px; background: rgba(18,25,38,.9); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); box-shadow: inset 0 0 0 1px var(--color-white-a16);
+  opacity: 0; transform: translateY(-8px); pointer-events: none; transition: opacity var(--dur-base) var(--ease-standard), transform var(--dur-base) var(--ease-standard); }
+.pc-toast.is-in { opacity: 1; transform: none; }
+.pc-toast-disc { width: 36px; height: 36px; border-radius: 50%; background: var(--color-accent); color: var(--color-on-accent); display: flex; align-items: center; justify-content: center; flex: none; }
+.pc-toast-disc .ic { font-size: 22px; }
+.pc-toast-txt { min-width: 0; display: flex; flex-direction: column; }
+.pc-toast-label { font-family: var(--type-phone-label-family); font-size: 13px; line-height: 16px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--color-accent-text); }
+.pc-toast-name { font: 600 16px/20px var(--font-ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pc-toast.compact { height: 36px; border-radius: 18px; padding: 0 14px 0 6px; gap: 8px; }
+.pc-toast.compact .pc-toast-disc { width: 24px; height: 24px; }
+.pc-toast.compact .pc-toast-disc .ic { font-size: 16px; }
+.pc-toast.compact .pc-toast-txt { flex-direction: row; align-items: baseline; gap: 8px; }
+
+/* Reconnecting banner: chip warn at top centre */
+.pc-banner { position: absolute; left: 50%; top: calc(var(--safe-t) + 12px); transform: translateX(-50%); z-index: 8; display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: var(--radius-pill); background: var(--color-surface-high); color: var(--color-accent-text); font: 600 13px/1 var(--font-ui); letter-spacing: .04em; white-space: nowrap; box-shadow: var(--shadow-1); }
+.pc-banner:empty { display: none; }
+.pc-banner .ic { font-size: 18px; }
+
+/* Rim pulse (no Vibration API on iPhone): inner ring 120 ms */
+.pc-rim { position: absolute; inset: 0; pointer-events: none; opacity: 0; box-shadow: inset 0 0 0 4px var(--color-accent), inset 0 0 24px 4px rgba(245,185,74,.45); z-index: 7; }
+
+/* ---------------- Touch HUD ---------------- */
+.pc-look-hint { display: flex; flex-direction: column; align-items: center; pointer-events: none; transition: opacity 400ms var(--ease-standard); color: var(--color-text); }
+.pc-look-hint.is-hidden { opacity: 0; }
+.pc-look-hint svg.ring { width: 120px; height: 120px; display: block; flex: none; transition: transform var(--dur-fast), opacity var(--dur-fast); }
+.pc-look-hint .pc-plate { display: inline-block; margin-top: 6px; padding: 3px 10px; border-radius: 10px; white-space: nowrap; color: var(--color-text); }
+.pc-look-hint.on svg.ring { transform: scale(1.06); }
+.pc-editing .pc-look-hint { pointer-events: auto; }
+.pc-editing .pc-look-hint.is-hidden { opacity: 1; }
+.pc-speedplate { display: flex; align-items: center; gap: 8px; padding: 0 12px; }
+.pc-speedplate .val { width: 56px; text-align: right; }
+.pc-speedplate .unit { color: var(--color-text-2); flex: 1; }
+.pc-speedplate .gear { width: 32px; height: 32px; border-radius: 8px; background: var(--color-text); color: var(--color-bg); display: flex; align-items: center; justify-content: center; font: 700 16px/1 var(--font-display); }
+.pc-compass { border-radius: 18px; overflow: hidden; }
+.pc-compass svg { display: block; }
+.pc-minimap { filter: drop-shadow(0 2px 6px rgba(0,0,0,.5)); }
+.pc-minimap svg { display: block; }
+.pc-steer { border-radius: 24px; overflow: hidden; }
+.pc-steer .chev { position: absolute; top: 24px; font-size: 28px; color: var(--color-text-2); }
+.pc-steer .chev.l { left: 10px; } .pc-steer .chev.r { right: 10px; }
+.pc-steer .pc-knob { position: absolute; left: calc(50% - 28px); top: 12px; width: 56px; height: 56px; border-radius: 50%; background: var(--color-text); box-shadow: var(--shadow-2); transform: translateX(0); }
+.pc-steer.is-held .pc-knob { transition: none; }
+.pc-steer .pc-knob { transition: transform var(--dur-fast) var(--ease-standard); }
+.pc-steer .lab { position: absolute; left: 0; right: 0; bottom: 6px; text-align: center; color: var(--color-text-2); }
+.pc-steer.is-pressed { background: rgba(36,48,72,.72); }
+.pc-arrow { border-radius: 24px; }
+.pc-arrow .ic { font-size: 28px; }
+.pc-hold { position: absolute; inset: 0; pointer-events: none; }
+.pc-hold circle { fill: none; stroke: var(--color-accent); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 138.2; stroke-dashoffset: 138.2; transform: rotate(-90deg); transform-origin: 24px 24px; }
+.pc-btn.is-holding .pc-hold circle { animation: pc-hold 600ms linear forwards; }
+@keyframes pc-hold { to { stroke-dashoffset: 0; } }
+.pc-editing .pc-el[data-ctl] { outline: 2px dashed var(--color-accent); outline-offset: 4px; pointer-events: auto; }
+
+/* ---------------- Wheel ---------------- */
+.pw-wheel { position: absolute; width: 236px; height: 236px; left: 0; top: 0; pointer-events: none; }
+.pw-wheel.is-drag { pointer-events: auto; cursor: grab; }
+.pw-wheel svg { position: absolute; inset: 0; width: 236px; height: 236px; display: block; transition: none; }
+.pw-hub { position: absolute; left: 50%; top: 50%; width: 104px; transform: translate(-50%, -50%); text-align: center; pointer-events: none; }
+.pw-hub .gear { color: var(--color-text-2); height: 16px; }
+.pw-hub .spd { font-size: 38px; line-height: 38px; }
+.pw-hub .unit { color: var(--color-text-2); margin-top: 2px; }
+.pw-rim-pulse .pw-wheel svg { animation: pw-shake .12s linear 2; }
+@keyframes pw-shake { 25% { translate: -2px 0; } 75% { translate: 2px 0; } }
+.pw-readout { position: absolute; width: 80px; text-align: center; font-family: var(--font-mono); color: var(--color-text-2); pointer-events: none; }
+.pw-tilt { position: absolute; width: 260px; height: 24px; pointer-events: none; }
+.pw-tilt .t { position: absolute; top: 3px; color: var(--color-text-2); }
+.pw-tilt .t.l { left: 0; } .pw-tilt .t.r { right: 0; }
+.pw-tilt .track { position: absolute; left: 22px; right: 22px; top: 9px; height: 6px; border-radius: 3px; background: var(--color-surface-high); }
+.pw-tilt .dz { position: absolute; left: calc(50% - 10px); top: 7px; width: 20px; height: 10px; border-radius: 2px; background: rgba(255,255,255,.12); }
+.pw-tilt .tick { position: absolute; left: calc(50% - 1px); top: 4px; width: 2px; height: 16px; background: var(--color-text-3); }
+.pw-tilt .knob { position: absolute; left: calc(50% - 9px); top: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--color-accent); box-shadow: 0 0 0 3px var(--color-bg); }
+.pw-topc { position: absolute; left: 0; top: 0; display: flex; justify-content: center; pointer-events: none; }
+
+/* Motion permission sheet (centred, surface-raised, radius 20, 320 wide) */
+.pw-gate { position: absolute; inset: 0; z-index: 6; display: flex; align-items: center; justify-content: center; background: var(--color-scrim-strong); padding: var(--safe-t) var(--safe-r) var(--safe-b) var(--safe-l); }
+.pw-sheet { width: 320px; max-width: 100%; border-radius: var(--radius-lg); background: var(--color-surface-raised); box-shadow: var(--shadow-3), inset 0 0 0 1px var(--color-white-a16); padding: 20px 20px 20px; text-align: left; }
+.pw-sheet h2 { margin: 0; }
+.pw-sheet p { margin: 8px 0 16px; color: var(--color-text-2); }
+.pw-sheet .pc-btn { width: 100%; height: 56px; font-size: 16px; letter-spacing: .06em; }
+
+/* ---------------- Rotate prompt (portrait) ---------------- */
+.pc-rotate { position: absolute; inset: 0; z-index: var(--z-orientation-lock); background: radial-gradient(80% 50% at 50% 38%, #16203A 0%, var(--color-bg) 72%); opacity: 0; visibility: hidden; pointer-events: none; transition: opacity var(--dur-base) var(--ease-standard), visibility 0s linear var(--dur-base); }
+@media (orientation: portrait) { .pc-rotate { opacity: 1; visibility: visible; pointer-events: auto; transition: opacity var(--dur-base) var(--ease-standard), visibility 0s; } }
+.pc-rotate-safe { position: absolute; left: var(--safe-l); right: var(--safe-r); top: var(--safe-t); bottom: var(--safe-b); }
+.pc-leave { position: absolute; left: 12px; top: 6px; height: 48px; padding: 0 16px; }
+.pc-rotate-body { position: absolute; left: 0; right: 0; top: 150px; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 0 32px; }
+.pc-rotate-body .pc-h1 { margin: 32px 0 0; }
+.pc-rotate-body .pc-body { margin: 12px 0 0; color: var(--color-text-2); max-width: 300px; }
+.pc-hint-tag { margin-top: 28px; display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; border-radius: var(--radius-pill); background: var(--color-surface-raised); font: 600 13px/1 var(--font-ui); letter-spacing: .04em; color: var(--color-text); }
+.pc-hint-tag .ic { font-size: 20px; color: var(--color-accent-text); }
+.pc-rotate-note { position: absolute; left: 24px; right: 24px; bottom: 24px; margin: 0; text-align: center; color: var(--color-text-2); }
+
+/* live frame (wheel): anchored children, pointer-enabled */
+.pc-frame.is-live { visibility: visible; }
+.pc-frame.is-live > * { pointer-events: auto; }
+.pc-frame.is-live > .pw-wheel, .pc-frame.is-live > .pw-tilt, .pc-frame.is-live > .pw-readout, .pc-frame.is-live > .pw-topc { pointer-events: none; }
+.pc-frame.is-live > .pw-wheel.is-drag { pointer-events: auto; }
+.pc-frame.is-live .pc-el { position: absolute; left: auto; top: auto; }
+.pw-topc { left: 0; right: 0; top: 12px; height: 36px; align-items: center; }
+.pw-topc > * { position: relative !important; left: auto !important; top: auto !important; }
+.pw-topc .pc-toast { position: absolute !important; }
+.pc-toast-label:empty { display: none; }
+.pc-pedal .ic.flip { transform: rotate(180deg); }
