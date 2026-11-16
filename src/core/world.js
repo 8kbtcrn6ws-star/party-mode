@@ -19,7 +19,7 @@ export const spawnToPhysics = (s, lift = 1.1) => ({ x: s.x, z: s.z, y: s.y + lif
 export async function loadWorld(baseUrl, { physicsWorld, renderChunks = true, onChunk = null, pickLod = defaultPickLod, initialPositions = [] } = {}) {
   const terrain = await loadPhysicsWorld(baseUrl);
   const meta = terrain.world;
-  if (physicsWorld) createTerrainCollider(physicsWorld, terrain); // whole world, always: collision is not streamed
+  const collider = physicsWorld ? createTerrainCollider(physicsWorld, terrain) : null; // whole world, always: collision is not streamed
 
   const group = new THREE.Group(); group.name = 'World';
   const loader = new GLTFLoader();
@@ -67,5 +67,5 @@ export async function loadWorld(baseUrl, { physicsWorld, renderChunks = true, on
   await stream(initialPositions.length ? initialPositions : meta.spawns);
 
   const spawns = meta.spawns.map((s) => ({ name: s.name, ...spawnToPhysics(s) }));
-  return { meta, terrain, heightAt: terrain.heightAt, surfaceAt: terrain.surfaceAt, group, spawns, size: terrain.sizeX, stream, chunkLods: () => Object.fromEntries([...state].map(([id, st]) => [id, st.lod])) };
+  return { meta, terrain, collider, heightAt: terrain.heightAt, surfaceAt: terrain.surfaceAt, group, spawns, size: terrain.sizeX, stream, chunkLods: () => Object.fromEntries([...state].map(([id, st]) => [id, st.lod])) };
 }
